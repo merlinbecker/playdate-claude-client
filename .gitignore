@@ -1,0 +1,14 @@
+# Lokale Konfiguration und Daten
+server/.env
+server/data/
+server/.venv/
+playdate/source/config.lua
+build/
+*.pdx/
+
+# Python
+__pycache__/
+*.pyc
+
+# System
+.DS_Store

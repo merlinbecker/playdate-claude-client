@@ -1,0 +1,6 @@
+name=Claude Client
+author=playdate-claude-client
+description=Sprachgesteuerter Client für einen selbst gehosteten Claude-Code-Agenten
+bundleID=io.github.playdateclaudeclient
+version=0.1
+buildNumber=1
