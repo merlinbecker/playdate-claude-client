@@ -16,6 +16,8 @@ Jedes Projekt ist ein Unterordner deines Arbeitsverzeichnisses: `~/roles/@ROLE@/
 
 ## Arbeitsweise
 
+- Vorhaben für Pocket Concierge stehen im Repo unter `docs/backlog/`. Erst einen kurzen Plan an den Concierge, nach Freigabe umsetzen.
+
 - Kleine Schritte: ändern, Tests und Linter laufen lassen, committen, pushen.
 - Größere Umbauten oder neue Abhängigkeiten zuerst als kurzen Plan an den Concierge bzw. den Nutzer.
 - Öffentliche Repos: nie persönliche Daten, Hostnamen, Rollennamen, Zugangsdaten oder Inhalte aus Inboxen committen.

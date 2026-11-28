@@ -534,7 +534,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
    - [ ] Playdate: Aufnahme mit A, Downsampling, Outbox mit Chunks und Retry
    - [ ] Inbox-Polling und Renderer für `text`, `list`, `icon`, `bar`, `choices`
    - [ ] Messung: Zeit vom Loslassen bis zur ersten Karte
-4. **Web-Dashboard:** Lagebild und Terminal, Nachtwartung über den Scheduler.
+4. **Web-Dashboard:** Lagebild und Terminal, Nachtwartung über den Scheduler. Als Erstes das nächtliche Wartungsfenster ([`backlog/wartungsfenster.md`](backlog/wartungsfenster.md)).
 5. **Queue, Gateway und Lagebild:** Asynchroner Eingang, Registry, generische Ansicht, Lagebild-Subagent.
 6. **Broker:** To-dos, Kalender, Mail und GitHub nur über den Broker, Bestätigungen per Ansicht.
 7. **Weitere Geräte:** E-Ink-Mini-Dashboard, Even Realities G1 über MentraOS.
