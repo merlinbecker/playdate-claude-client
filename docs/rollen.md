@@ -118,4 +118,13 @@ Im Bootstrap zu prüfen: ob sich Remote Control nach `--continue` zuverlässig w
 
 ## Quota
 
-Alle Rollen teilen sich dieselbe Abo-Quota. Rollen ohne Aufträge verbrauchen nichts. Teuer wird es nur, wenn Rollen sich gegenseitig ohne Not beschäftigen. Deshalb verteilt der Concierge sparsam und bündelt Aufträge.
+Alle Rollen teilen sich dieselbe Abo-Quota. Das System ist darauf ausgelegt, mit einem Pro-Abo auszukommen: Es arbeitet die Inboxen ab, solange Quota da ist, und wartet sonst.
+
+**Wenn die Quota leer ist:**
+
+1. Eingaben werden weiter angenommen und landen in den Inboxen. Der Concierge bestätigt „abgelegt, wird nach dem Reset bearbeitet“, sobald er selbst wieder arbeiten kann; bis dahin quittiert später das Gateway.
+2. Der Watcher erkennt das Limit an der Meldung von Claude Code im Terminal der Sitzung (`tmux capture-pane`) und merkt sich die angezeigte Reset-Zeit.
+3. Bis dahin weckt er keine Sitzung mehr. Es entstehen keine Fehlversuche, die nur Zeit kosten.
+4. Nach dem Reset weckt er die Rollen nacheinander, dringende Aufträge zuerst.
+
+Weil alles in Inbox-Dateien steht, geht beim Warten nichts verloren. Rollen ohne Aufträge verbrauchen nichts. Teuer wird es nur, wenn Rollen sich gegenseitig ohne Not beschäftigen. Deshalb verteilt der Concierge sparsam und bündelt Aufträge.
