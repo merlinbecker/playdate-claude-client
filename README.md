@@ -1,36 +1,106 @@
-# playdate-claude-client
+# Arborist
 
-Sprich mit deinem eigenen, dauerhaft laufenden Claude-Code-Agenten – vom Playdate aus.
+**Ein persönlicher Always-on-Agent, mit dem man von überall reden kann – auch von sehr einfachen Geräten aus.**
 
-Der Playdate nimmt Sprache auf (auch offline, auf dem Gerät gepuffert), lädt sie bei WLAN-Verbindung in wiederaufnehmbaren Häppchen hoch. Ein selbst gehosteter Server transkribiert (lokal mit Whisper oder optional über die Voxtral-API) und gibt den Auftrag an einen langlebigen Claude-Agenten. Der Agent antwortet mit kleinen, deklarativ beschriebenen 1-Bit-Karten (Text, Icons, Tilesets, Animationen, Auswahl), die der Playdate rendert.
+Arborist ist Claude Code, das rund um die Uhr auf einer eigenen VM läuft und Ordnung in den Alltag bringt: Ideen abladen, To-dos nachführen, an Termine und Notizen erinnern, Mails und Kalender pflegen, zusammenfassen, was gerade läuft, und kleine private Code-Projekte auf GitHub voranbringen.
 
+Bedient wird er auf zwei Arten:
+
+- **Web-Dashboard:** Kann alles. Lagebild, Projekte, Verlauf, Terminal.
+- **Eingeschränkte Geräte:** Playdate, Smart Glasses wie die Even Realities G1, ein kleines E-Ink-Display. Man spricht hinein oder wählt aus vorbereiteten nächsten Schritten – ganz ohne Tastatur.
+
+> Das Repo heißt noch `playdate-claude-client`, weil der Playdate der erste Client ist. Gebaut wird aber das ganze System.
+
+## So funktioniert es
+
+```mermaid
+flowchart LR
+    subgraph Geräte
+        WEB[Web-Dashboard<br/>kann alles]
+        PD[Playdate<br/>Sprache + Auswahl]
+        G1[Even Realities G1<br/>über MentraOS]
+        EI[E-Ink-Display<br/>Mini-Dashboard]
+    end
+
+    subgraph Arborist[Arborist-Instanz auf eigener VM]
+        GW[Device-Gateway<br/>Registry · Ingest · Push]
+        Q[(Eingangs-Queue<br/>alles wird sofort abgelegt)]
+        IN[Intake-Agent<br/>Transkription + Aufbereitung]
+        AR[Arborist<br/>Claude Code, 24/7<br/>Main-Agent + Subagenten]
+        LB[Lagebild<br/>Cheat Sheets · nächste Schritte<br/>Tagesthemen]
+        BR[Rechte- und Tool-Broker<br/>hält alle Tokens]
+    end
+
+    EXT[To-do · Kalender · Mail · GitHub]
+
+    WEB & PD & G1 --> GW --> Q --> IN --> AR
+    AR --> LB --> GW
+    GW --> WEB & PD & G1 & EI
+    AR -- ein MCP-Server --> BR --> EXT
 ```
-Playdate ──(Audio-Chunks, PUT)──▶ Server: Ingest → Transkription → Queue → Agent (Claude Code)
-   ▲                                                                  │
-   └──────────────(Karten, GET /inbox)────────────────────────────────┘
-```
 
-## Vision
+1. **Ablegen geht immer.** Jede Eingabe landet zuerst in einer Queue und wird sofort quittiert – auch wenn der Agent gerade beschäftigt ist oder die Quota leer ist.
+2. **Abarbeiten asynchron.** Der Arborist holt sich Einträge in Batches, ordnet sie Projekten zu und verteilt sie an Subagenten (To-dos, Kalender und Mail, Notizen, Code).
+3. **Antworten passen aufs Gerät.** Der Agent beschreibt Ergebnisse geräteunabhängig. Adapter machen daraus eine HTML-Seite, eine 1-Bit-Karte für den Playdate, ein paar Zeilen für die Brille oder ein Bild für das E-Ink-Display.
+4. **Bedienbar ohne Sprache.** Ein Lagebild-Subagent liefert zu allem eine Kurzfassung und auswählbare nächste Schritte.
+5. **Werkzeuge nur über den Broker.** Der Agent hat keine eigenen Zugänge. Ein Rechte- und Tool-Broker hält die Tokens, gibt dem Agenten genau einen MCP-Server und entscheidet pro Tool: erlaubt, verboten oder nur nach Bestätigung.
+6. **Nachts Wartung.** Der Agent geht den Tag durch, fasst zusammen, pflegt sein Gedächtnis und plant den nächsten Tag.
 
-Der Playdate-Client ist der erste Baustein von **Arborist**: einem persönlichen Assistenten, der als Claude Code 24/7 auf einer VM läuft. Er wird von mehreren registrierten Geräten bedient (Playdate, Web-UI mit Dashboard und Terminal, Handy), verteilt Aufgaben an Projekt-Subagenten und bekommt externe Tools nur über einen Rechte- und Tool-Broker. Ein Lagebild-Subagent liefert Cheat Sheets und vorgefertigte nächste Schritte, damit sich alles auch ohne Sprache bedienen lässt. Details in [`docs/vision.md`](docs/vision.md).
+## Prinzipien
 
-## Status
+- **Generisch und anpassbar:** Neue Geräte über Adapter, neue Tools über den Broker, neue Anwendungsfälle über Subagenten und Skills im eigenen Workspace. Der Kern bleibt gleich.
+- **Dumme Geräte:** Die Logik liegt auf dem Server. Geräte nehmen auf, puffern, laden hoch und zeigen an.
+- **Privat bleibt privat:** Persönliche Daten, Prompts und Tokens gehören nicht ins Repo, sondern in `server/.env`, den Broker bzw. den Workspace des Agenten.
+- **Im Rahmen des Abos:** Claude Code läuft mit dem eigenen Claude-Abo. Ist die Quota aufgebraucht, wartet der Agent bis zum Reset – Eingaben werden weiter angenommen.
+- **Für private Zwecke:** To-dos, Notizen, kleine Projekte. Keine dienstlichen Daten.
 
-Proof of Concept. Ziel des POC: flüssiger Ablauf von „A drücken und sprechen“ bis „Karte erscheint“ mit einem Agenten, der einfach antwortet.
+## Geräte
+
+| Gerät | Status | Eingabe | Ausgabe |
+| --- | --- | --- | --- |
+| Web-Dashboard | geplant (Meilenstein 2) | Sprache, Text, Terminal | alles |
+| Playdate | POC in Arbeit | Sprache (auch offline gepuffert), Kurbel, Tasten | 1-Bit-Karten |
+| E-Ink-Display | geplant | – | Mini-Dashboard |
+| Even Realities G1 | geplant, über [MentraOS](https://github.com/Mentra-Community/MentraOS) | Sprache, Tasten | kurze Textansichten |
+
+Der Playdate kann nur bei geöffneter App senden und empfangen; Aufnahmen werden bis dahin gepuffert.
+
+## Meilensteine
+
+1. **Playdate-POC lokal:** Sprechen → Upload → Transkription → einfacher Agent → Karte.
+2. **VM und Web-Dashboard:** Azure-VM per Pulumi, Arborist läuft 24/7, Nachtwartung.
+3. **Queue, Gateway und Lagebild:** Asynchroner Eingang, generische Ansichten, nächste Schritte.
+4. **Broker:** To-dos, Kalender, Mail, GitHub – nur über den Broker.
+5. **Weitere Geräte:** E-Ink-Display, Even Realities G1.
+
+## Zum Diskutieren
+
+Fragen, bei denen Gegenwind willkommen ist:
+
+- Ist die Trennung in Intake-Agent, Main-Agent und Lagebild-Subagent sinnvoll, oder zu viel?
+- Broker selbst bauen oder ein bestehendes MCP-Gateway nutzen?
+- Reicht SQLite als Queue, oder lohnt sich früh NATS bzw. Redis Streams?
+- Wie sicher ist ein Agent mit Shell-Zugriff, wenn nur die externen Tools über den Broker laufen?
+- Trägt das Abo-Modell auf Dauer, oder muss die Agent-Anbindung austauschbar werden?
+
+## Doku
+
+| Datei | Inhalt |
+| --- | --- |
+| [`docs/arc42.md`](docs/arc42.md) | Architektur nach arc42 mit C4-Diagrammen |
+| [`docs/vision.md`](docs/vision.md) | Vision, Bausteine, Betriebsmodi und Quota |
+| [`docs/karten-dsl.md`](docs/karten-dsl.md) | Format der Karten für den Playdate |
+| [`docs/poc-setup.md`](docs/poc-setup.md) | POC auf dem lokalen Rechner aufsetzen |
 
 ## Struktur
 
 | Pfad | Inhalt |
 | --- | --- |
-| `docs/vision.md` | Vision und Scope von Arborist |
-| `docs/arc42.md` | Architektur nach arc42 |
-| `docs/karten-dsl.md` | Format der Karten, die der Agent erzeugt |
-| `docs/poc-setup.md` | POC auf dem lokalen Rechner aufsetzen |
 | `server/` | Ingest-API, Transkription, Queue, Agent-Worker |
 | `playdate/` | Playdate-Client (Lua) |
 | `tools/fake_playdate.py` | Simuliert den Playdate vom Rechner aus |
 
-## Schnellstart (lokal)
+## Schnellstart (POC lokal)
 
 ```bash
 cd server
@@ -39,9 +109,4 @@ pip install -r requirements.txt
 PDC_TOKEN=geheim PDC_AGENT=echo uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Dann `python3 tools/fake_playdate.py --text "Hallo"` – Details in `docs/poc-setup.md`.
-
-## Grenzen
-
-- Der Playdate kann nur bei geöffneter App senden und empfangen.
-- Private Inhalte (Agent-Prompts, Daten, Tokens) gehören nicht ins Repo, sondern in `server/.env` bzw. das Arbeitsverzeichnis des Agenten.
+Dann `python3 tools/fake_playdate.py --text "Hallo"` – Details in [`docs/poc-setup.md`](docs/poc-setup.md).

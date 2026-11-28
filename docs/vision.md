@@ -52,7 +52,8 @@ Jedes Gerät wird registriert (Gerätetoken) und meldet seine Fähigkeiten: Eing
 | Playdate | Sprache (offline gepuffert), Auswahl per Kurbel und Tasten | 1-Bit-Karten nach [Karten-DSL](karten-dsl.md) |
 | Web-UI | Sprache, Text, Terminal | Dashboard mit Lagebild und Projekten; Terminal (z. B. xterm.js) auf die Agent-Session |
 | Handy | Sprache, Text, Auswahl | Web-UI mobil, Benachrichtigungen |
-| Später | z. B. E-Ink-Display | passive Anzeige über Adapter |
+| E-Ink-Display | – | Passives Mini-Dashboard, gerendertes Bild per Abruf |
+| Even Realities G1 | Sprache, Tasten (über MentraOS-Miniapp auf dem Handy) | Wenige Zeilen Text in der Brille |
 
 ### 3.2 Device-Gateway (Ingest und Push)
 
@@ -164,7 +165,7 @@ Regeln:
 - Sprachausgabe
 - Mehrbenutzerbetrieb (eine Instanz gehört genau einer Person)
 - Eigene native Handy-App
-- Weitere Geräte wie E-Ink (später über Adapter)
+- Weitere Geräte über das Web-Dashboard, Playdate, E-Ink und G1 hinaus
 
 ## 7. Ausbaustufen
 
