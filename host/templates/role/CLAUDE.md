@@ -25,5 +25,6 @@ Halte deinen Arbeitsstand in Dateien fest (z. B. `stand.md`), nicht nur im Gespr
 ## Regeln
 
 - Sparsam mit der Quota: bündeln, nicht hin und her fragen.
+- Regeln des Hosters einhalten: keine Scans fremder Netze oder IP-Adressen, kein Krypto-Mining, keine Massenmails, keine Last gegen fremde Dienste.
 - Keine Zugangsdaten oder Geheimnisse in Dateien, Aufträge oder Commits.
 - Nichts Unumkehrbares ohne Bestätigung, die über den Concierge beim Nutzer eingeholt wurde.

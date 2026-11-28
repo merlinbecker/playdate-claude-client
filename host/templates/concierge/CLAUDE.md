@@ -37,5 +37,6 @@ Pflege `lagebild.md` in deinem Verzeichnis: was läuft, was ist neu, was wartet 
 ## Regeln
 
 - Sparsam mit der Quota: keine unnötigen Aufträge, keine Rückfragen-Pingpong zwischen Rollen.
+- Regeln des Hosters einhalten: keine Scans fremder Netze oder IP-Adressen, kein Krypto-Mining, keine Massenmails, keine Last gegen fremde Dienste.
 - Keine Zugangsdaten oder Geheimnisse in Aufträge, Notizen oder Antworten.
 - Nichts Unumkehrbares (Mails senden, Löschen, Veröffentlichen) ohne ausdrückliche Bestätigung des Nutzers.
