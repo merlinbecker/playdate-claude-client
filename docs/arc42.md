@@ -391,6 +391,19 @@ Der Agent beschreibt Ausgaben geräteunabhängig: Titel, eine Kernaussage, optio
 | Andere Transkription | Provider-Konfiguration | Whisper lokal, Voxtral |
 | Weitere Instanz | Pulumi-Stack mit eigenen Parametern | getrennte Instanzen |
 
+### Rollen und Sitzungen
+
+Der Agent läuft als mehrere Rollen in getrennten Claude-Code-Sitzungen: ein **Concierge** als einziger Gesprächspartner und dahinter Rollen-Agenten mit eigenem Arbeitsverzeichnis, eigenen Skills und eigener Inbox. Rollen kommunizieren nur über Inboxen. systemd und tmux halten die Sitzungen am Laufen und setzen sie nach einem Neustart fort. Details: [`rollen.md`](rollen.md).
+
+```mermaid
+flowchart LR
+    N[Nutzer] --> C[Concierge]
+    C -->|inbox| A[Rollen-Agent A]
+    C -->|inbox| B[Rollen-Agent B]
+    A & B -->|inbox| C
+    B -.->|inbox| A
+```
+
 ### Gedächtnis
 
 Der Agent hält sein Wissen in Dateien im Workspace (Projekte, Vorlieben, offene Punkte). Die Nachtwartung fasst den Tag zusammen und räumt auf. Persönliche Inhalte liegen nie im Repo.
@@ -432,6 +445,9 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 11 | Generische Ansicht plus Geräte-Adapter | Sehr unterschiedliche Geräte ohne Logik im Client |
 | 12 | Claude Code mit Abo, keine Überlauf-Abrechnung | Kosten planbar; Quota leer heißt warten bis zum Reset |
 | 13 | Remote Control bleibt als Admin-Zugang | Funktioniert unabhängig vom eigenen Gateway; Notfallzugang, wenn eigene Teile kaputt sind |
+| 14 | Rollen als getrennte Sitzungen mit Inbox statt Rollenwechsel in einer Sitzung | Saubere Trennung von Kontext, Skills und Regeln; Rollen bleiben einzeln ansprechbar |
+| 15 | Concierge als einziger Gesprächspartner | Eine Stelle für Sprache, Ordnen und Verteilen; entspricht dem Intake-Agenten |
+| 16 | Wiederanlauf über systemd, Sitzungen mit `--continue` | Alle Rollen kommen nach einem Neustart zurück; Herdr nur als optionale Admin-Ansicht |
 
 ## 10. Qualitätsszenarien
 

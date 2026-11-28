@@ -44,7 +44,8 @@ flowchart LR
 3. **Antworten passen aufs Gerät.** Der Agent beschreibt Ergebnisse geräteunabhängig. Adapter machen daraus eine HTML-Seite, eine 1-Bit-Karte für den Playdate, ein paar Zeilen für die Brille oder ein Bild für das E-Ink-Display.
 4. **Bedienbar ohne Sprache.** Ein Lagebild-Subagent liefert zu allem eine Kurzfassung und auswählbare nächste Schritte.
 5. **Werkzeuge nur über den Broker.** Der Agent hat keine eigenen Zugänge. Ein Rechte- und Tool-Broker hält die Tokens, gibt dem Agenten genau einen MCP-Server und entscheidet pro Tool: erlaubt, verboten oder nur nach Bestätigung.
-6. **Nachts Wartung.** Der Agent geht den Tag durch, fasst zusammen, pflegt sein Gedächtnis und plant den nächsten Tag.
+6. **Ein Concierge, mehrere Rollen.** Man spricht nur mit dem Concierge. Er verteilt Aufträge über Inboxen an Rollen-Agenten mit eigenem Fachgebiet, etwa Wissen oder Code, die jeweils in ihrer eigenen Sitzung laufen ([`docs/rollen.md`](docs/rollen.md)).
+7. **Nachts Wartung.** Der Agent geht den Tag durch, fasst zusammen, pflegt sein Gedächtnis und plant den nächsten Tag.
 
 ## Prinzipien
 
@@ -89,6 +90,7 @@ Fragen, bei denen Gegenwind willkommen ist:
 | Datei | Inhalt |
 | --- | --- |
 | [`docs/bootstrap.md`](docs/bootstrap.md) | Meilenstein 1: Agent in der Cloud zum Laufen bringen |
+| [`docs/rollen.md`](docs/rollen.md) | Concierge, Rollen-Agenten und Inboxen |
 | [`docs/arc42.md`](docs/arc42.md) | Architektur nach arc42 mit C4-Diagrammen |
 | [`docs/vision.md`](docs/vision.md) | Vision, Bausteine, Betriebsmodi und Quota |
 | [`docs/karten-dsl.md`](docs/karten-dsl.md) | Format der Karten für den Playdate |
