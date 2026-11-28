@@ -2,13 +2,17 @@
 
 Sprich mit deinem eigenen, dauerhaft laufenden Claude-Code-Agenten – vom Playdate aus.
 
-Der Playdate nimmt Sprache auf (auch offline, auf dem Gerät gepuffert), lädt sie bei WLAN-Verbindung in wiederaufnehmbaren Häppchen hoch. Ein selbst gehosteter Server transkribiert lokal mit Whisper und gibt den Auftrag an einen langlebigen Claude-Agenten. Der Agent antwortet mit kleinen, deklarativ beschriebenen 1-Bit-Karten (Text, Icons, Tilesets, Animationen, Auswahl), die der Playdate rendert.
+Der Playdate nimmt Sprache auf (auch offline, auf dem Gerät gepuffert), lädt sie bei WLAN-Verbindung in wiederaufnehmbaren Häppchen hoch. Ein selbst gehosteter Server transkribiert (lokal mit Whisper oder optional über die Voxtral-API) und gibt den Auftrag an einen langlebigen Claude-Agenten. Der Agent antwortet mit kleinen, deklarativ beschriebenen 1-Bit-Karten (Text, Icons, Tilesets, Animationen, Auswahl), die der Playdate rendert.
 
 ```
-Playdate ──(Audio-Chunks, PUT)──▶ Server: Ingest → Whisper → Queue → Agent (Claude Code)
+Playdate ──(Audio-Chunks, PUT)──▶ Server: Ingest → Transkription → Queue → Agent (Claude Code)
    ▲                                                                  │
    └──────────────(Karten, GET /inbox)────────────────────────────────┘
 ```
+
+## Vision
+
+Langfristig wird daraus ein generischer Agenten-Hub: ein Claude-Code-Agent in der Cloud, der Ergebnisse an mehrere Geräte verteilt – Playdate, E-Ink-Display, Web-Ansicht – und sich mehrfach betreiben lässt, z. B. privat und für die Arbeit getrennt. Details in [`docs/vision.md`](docs/vision.md).
 
 ## Status
 
@@ -18,6 +22,7 @@ Proof of Concept. Ziel des POC: flüssiger Ablauf von „A drücken und sprechen
 
 | Pfad | Inhalt |
 | --- | --- |
+| `docs/vision.md` | Zielvision: Agenten-Hub mit mehreren Geräten und Instanzen |
 | `docs/arc42.md` | Architektur nach arc42 |
 | `docs/karten-dsl.md` | Format der Karten, die der Agent erzeugt |
 | `docs/poc-setup.md` | POC auf dem lokalen Rechner aufsetzen |
