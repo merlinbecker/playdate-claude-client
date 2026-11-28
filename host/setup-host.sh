@@ -49,7 +49,8 @@ if ((${#missing[@]})); then
   apt-get install -y -qq "${missing[@]}"
 fi
 
-if [[ $SWAP_GB -gt 0 ]] && ! swapon --show=NAME --noheadings | grep -q .; then
+# Ohne Pipe: grep -q würde swapon mit SIGPIPE beenden, und pipefail meldet dann fälschlich „kein Swap“.
+if [[ $SWAP_GB -gt 0 && -z $(swapon --show=NAME --noheadings) && ! -e /swapfile ]]; then
   log "Swap ${SWAP_GB} GB"
   fallocate -l "${SWAP_GB}G" /swapfile
   chmod 600 /swapfile
