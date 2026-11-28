@@ -1,14 +1,14 @@
 # CLAUDE.md
 
 ## Projekt
-Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Architektur: `docs/arc42.md`.
+Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Architektur: `docs/arc42.md`, Zielvision: `docs/vision.md`.
 
 ## Sprache
 Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisch.
 
 ## Prinzipien
 - Client so dumm wie möglich: Neue Darstellungen kommen über die Karten-DSL (`docs/karten-dsl.md`), nicht über Client-Updates.
-- Spracherkennung lokal (faster-whisper oder whisper.cpp). Keine Audio-Daten an Drittanbieter.
+- Spracherkennung als austauschbarer Provider: lokal (faster-whisper/whisper.cpp, Standard) oder Voxtral-API. Audio geht nur an Drittanbieter, wenn die Instanz das explizit konfiguriert.
 - Store-and-forward: Jede Aufnahme hat eine ID, wird in nummerierten Chunks idempotent hochgeladen und kann nach Abbruch fortgesetzt werden.
 - Asynchron: Upload, Transkription und Agent sind über eine Queue entkoppelt.
 - Agent-Ausgaben immer validieren. Kaputtes JSON wird zur Textkarte, nie zum Absturz.

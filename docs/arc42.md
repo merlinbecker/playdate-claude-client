@@ -1,5 +1,7 @@
 # Architektur nach arc42
 
+> Die erweiterte Zielvision (mehrere Geräte, mehrere Instanzen, Betrieb auf Azure) steht in [`vision.md`](vision.md).
+
 ## 1. Einführung und Ziele
 
 Ein dauerhaft erreichbarer persönlicher Assistent auf Basis von Claude Code, bedient per Sprache vom Playdate. Der Playdate funktioniert auch offline: Aufnahmen werden gepuffert und bei Verbindung häppchenweise hochgeladen. Ergebnisse kommen als dynamische 1-Bit-Karten mit Animation und Interaktion zurück.
@@ -8,7 +10,7 @@ Ein dauerhaft erreichbarer persönlicher Assistent auf Basis von Claude Code, be
 | --- | --- | --- |
 | 1 | Flüssiger Ablauf | Aufnahme startet < 200 ms nach A; Statuskarte „verstanden“ < 10 s nach Upload-Ende |
 | 2 | Offline-Robustheit | Keine Aufnahme geht verloren; Upload setzt nach Abbruch fort |
-| 3 | Datenschutz | Sprache wird nur auf eigener Hardware transkribiert |
+| 3 | Datenschutz | Transkriptions-Provider ist pro Instanz wählbar; Standard ist lokal |
 | 4 | Erweiterbare Darstellung | Neue Kartentypen ohne Client-Update |
 
 Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
@@ -58,7 +60,7 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 | Baustein | Aufgabe |
 | --- | --- |
 | Ingest-API | `PUT /rec/{id}/chunk/{n}`, `GET /rec/{id}`, `POST /rec/{id}/done` |
-| Transkription | faster-whisper (Standard) oder whisper.cpp, Sprache `de` |
+| Transkription | Provider wählbar: faster-whisper/whisper.cpp lokal (Standard) oder Voxtral-API, Sprache `de` |
 | Queue | SQLite-Tabelle `jobs` mit Zuständen `uploading → transcribing → queued → running → done/error` |
 | Agent-Worker | Ein Thread, arbeitet Jobs nacheinander ab, hält die Session-ID |
 | Card-Service | Validiert Karten, Fallback auf Textkarte, schreibt in die Inbox |
@@ -92,9 +94,9 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 | Variante | Server läuft auf | Erreichbarkeit | Zweck |
 | --- | --- | --- | --- |
 | POC | Lokaler Rechner (Linux, macOS, WSL2) | LAN, HTTP mit Token | Ablauf und Latenz testen |
-| V2 | Linux-VM (z. B. 2 vCPU, 4 GB RAM) | HTTPS über Reverse Proxy, nur Port 443 | Dauerbetrieb |
+| V2 | Azure-VM (z. B. B2s, 2 vCPU, 4 GB RAM), per Pulumi provisioniert, Docker | HTTPS über Reverse Proxy, nur Port 443 | Dauerbetrieb |
 
-In V2 läuft der Server als systemd-Dienst. Für den POC reicht ein Prozess.
+In V2 läuft der Server als Docker-Container, je Instanz ein eigener Satz. Für den POC reicht ein Prozess.
 
 ## 8. Querschnittliche Konzepte
 
@@ -119,7 +121,7 @@ Der System-Prompt des Agenten liegt nicht im Repo, sondern in einer Datei, auf d
 - Gerätetoken im Header `X-Token`.
 - POC nur im LAN. V2 nur über HTTPS, Port 443, Rate-Limit am Reverse Proxy.
 - Claude-Code-Berechtigungen über `settings.json` des Agent-Arbeitsverzeichnisses einschränken.
-- Den Server nur für private Zwecke betreiben; keine fremden oder dienstlichen Daten.
+- Instanzen strikt trennen. Eine Arbeits-Instanz nur mit Freigabe des Arbeitgebers betreiben; dienstliche Daten nie in einer privaten Instanz.
 
 ## 9. Architekturentscheidungen
 
@@ -131,6 +133,8 @@ Der System-Prompt des Agenten liegt nicht im Repo, sondern in einer Datei, auf d
 | 4 | Deklarative Karten-DSL | Neue Darstellungen ohne Client-Update |
 | 5 | Erst lokaler POC, dann VM | Ablauf testen, bevor Kosten entstehen |
 | 6 | Downsampling in Lua im POC | Schnell umsetzbar; C nur, wenn zu langsam |
+| 7 | Transkription als austauschbarer Provider (ergänzt ADR 1) | Voxtral-API ist günstig (ca. 0,24 $/h) und gut; lokal bleibt Standard für maximalen Datenschutz |
+| 8 | V2 auf Azure-VM mit Docker, IaC mit Pulumi | Dauerhafte Shell für Claude Code; reproduzierbar; Container Instances eher für kurze Jobs |
 
 ## 10. Qualitätsszenarien
 
