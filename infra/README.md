@@ -42,6 +42,7 @@ Im Repo unter *Settings → Environments* die Umgebung **`infra`** anlegen. Opti
 | Name | Inhalt | Standard |
 | --- | --- | --- |
 | `POCKET_CONCIERGE_ROLES` | Rollen, mit Komma getrennt; `concierge` muss dabei sein | `concierge` |
+| `POCKET_CONCIERGE_ROLE_TYPES` | Rollentyp je Rolle, z. B. `meinbauer=bauen,notizen=wissen` (Typen: `bauen`, `wissen`) | leer = allgemeine Vorlage |
 | `POCKET_CONCIERGE_LOCATION` | `nbg1`, `fsn1` oder `hel1` | `nbg1` |
 | `POCKET_CONCIERGE_SERVER_TYPE` | z. B. `cx23`, `cax11` (ARM), `cpx22` | `cx23` |
 | `POCKET_CONCIERGE_BACKUPS` | `true` oder `false` | `true` |

@@ -44,7 +44,7 @@ as_user() { (cd "$USER_HOME" && runuser -u "$POCKET_CONCIERGE_USER" -- env HOME=
 log "Pakete"
 export DEBIAN_FRONTEND=noninteractive
 missing=()
-for pkg in git tmux inotify-tools curl jq; do
+for pkg in git tmux inotify-tools curl jq gh; do
   dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
 done
 if ((${#missing[@]})); then
@@ -97,6 +97,12 @@ fi
 as_user bash -c 'grep -q ".local/bin" ~/.profile 2>/dev/null || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.profile'
 
 # --- 3. Rollen ----------------------------------------------------------------
+# Rollentyp je Rolle (Vorlage): POCKET_CONCIERGE_ROLE_TYPES="rolle=typ ...", Typen = Ordner unter templates/
+declare -A TYPE_FOR=()
+for pair in ${POCKET_CONCIERGE_ROLE_TYPES:-}; do
+  [[ $pair == *=* ]] && TYPE_FOR["${pair%%=*}"]="${pair#*=}"
+done
+
 declare -A REPO_FOR=()
 if [[ -r $REPOS_FILE ]]; then
   while IFS='=' read -r role url; do
@@ -121,7 +127,14 @@ for role in $POCKET_CONCIERGE_ROLES; do
 
   if [[ ! -e $dir/CLAUDE.md ]]; then
     template="$HOST_DIR/templates/role/CLAUDE.md"
-    [[ $role == concierge ]] && template="$HOST_DIR/templates/concierge/CLAUDE.md"
+    role_type="${TYPE_FOR[$role]:-}"
+    if [[ $role == concierge ]]; then
+      template="$HOST_DIR/templates/concierge/CLAUDE.md"
+    elif [[ -n $role_type && -r $HOST_DIR/templates/$role_type/CLAUDE.md ]]; then
+      template="$HOST_DIR/templates/$role_type/CLAUDE.md"
+    elif [[ -n $role_type ]]; then
+      warn "Unbekannter Rollentyp '$role_type' für $role, nehme die allgemeine Vorlage"
+    fi
     log "Rolle $role: CLAUDE.md aus Vorlage"
     sed -e "s/@ROLE@/$role/g" -e "s/@ROLES@/$POCKET_CONCIERGE_ROLES/g" "$template" | as_user tee "$dir/CLAUDE.md" >/dev/null
   fi

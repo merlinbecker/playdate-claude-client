@@ -35,6 +35,7 @@ def render_env(settings: Settings) -> str:
     values = {
         "POCKET_CONCIERGE_USER": settings.admin_user,
         "POCKET_CONCIERGE_ROLES": " ".join(settings.roles),
+        "POCKET_CONCIERGE_ROLE_TYPES": " ".join(f"{r}={t}" for r, t in sorted(settings.role_types.items())),
         "POCKET_CONCIERGE_REPO_URL": settings.repo_url,
         "POCKET_CONCIERGE_REPO_REF": settings.repo_ref,
         "POCKET_CONCIERGE_SWAP_GB": str(settings.swap_gb),

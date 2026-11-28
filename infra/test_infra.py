@@ -14,7 +14,7 @@ import yaml
 sys.path.insert(0, os.path.dirname(__file__))
 
 import cloud_init  # noqa: E402
-from settings import Settings, parse_role_repos, split_list  # noqa: E402
+from settings import Settings, parse_role_repos, parse_role_types, split_list  # noqa: E402
 
 SECRET_SIG = "1b47061264138c4ac30d75fd1eb44270"
 
@@ -35,6 +35,7 @@ def make_settings(**overrides) -> Settings:
         repo_url="https://github.com/example/pocket-concierge",
         roles=["concierge", "wissen", "bauen"],
         role_repos={"wissen": "git@github.com:example/wissen.git"},
+        role_types={"bauen": "bauen", "wissen": "wissen"},
     )
     values.update(overrides)
     return Settings(**values)
@@ -52,6 +53,15 @@ class SettingsTest(unittest.TestCase):
             parse_role_repos("ohne-gleichheitszeichen")
         with self.assertRaises(ValueError):
             parse_role_repos("Gross=url")
+
+    def test_parse_role_types(self):
+        self.assertEqual(parse_role_types("bauen-a=bauen, notizen=wissen"), {"bauen-a": "bauen", "notizen": "wissen"})
+        with self.assertRaises(ValueError):
+            parse_role_types("x=unbekannt")
+
+    def test_rejects_type_for_unknown_role(self):
+        with self.assertRaises(ValueError):
+            make_settings(role_types={"fremd": "bauen"}).validate()
 
     def test_valid(self):
         make_settings().validate()
@@ -87,6 +97,7 @@ class CloudInitTest(unittest.TestCase):
         self.assertEqual(files[cloud_init.TAILSCALE_KEY_PATH]["content"].strip(), KEY)
         env = files[cloud_init.ENV_PATH]["content"]
         self.assertIn("POCKET_CONCIERGE_ROLES='concierge wissen bauen'", env)
+        self.assertIn("POCKET_CONCIERGE_ROLE_TYPES='bauen=bauen wissen=wissen'", env)
         self.assertEqual(files[cloud_init.ROLE_REPOS_PATH]["permissions"], "0600")
         self.assertIn("wissen=git@github.com:example/wissen.git", files[cloud_init.ROLE_REPOS_PATH]["content"])
         self.assertEqual(data["runcmd"][-1], ["bash", "/opt/pocket-concierge/host/setup-host.sh"])

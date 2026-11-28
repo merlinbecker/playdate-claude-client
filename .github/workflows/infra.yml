@@ -48,6 +48,7 @@ jobs:
       ROLE_REPOS: ${{ secrets.POCKET_CONCIERGE_ROLE_REPOS }}
       # Optionale Einstellungen (leer = Standard aus infra/settings.py)
       ROLES: ${{ vars.POCKET_CONCIERGE_ROLES }}
+      ROLE_TYPES: ${{ vars.POCKET_CONCIERGE_ROLE_TYPES }}
       LOCATION: ${{ vars.POCKET_CONCIERGE_LOCATION }}
       SERVER_TYPE: ${{ vars.POCKET_CONCIERGE_SERVER_TYPE }}
       BACKUPS: ${{ vars.POCKET_CONCIERGE_BACKUPS }}
@@ -91,6 +92,7 @@ jobs:
           pulumi config set --secret pocket-concierge:tailscaleAuthKey -- "$TAILSCALE_AUTHKEY"
           if [ -n "$ROLE_REPOS" ]; then pulumi config set --secret pocket-concierge:roleRepos -- "$ROLE_REPOS"; else pulumi config rm pocket-concierge:roleRepos 2>/dev/null || true; fi
           set_opt roles "$ROLES"
+          set_opt roleTypes "$ROLE_TYPES"
           set_opt location "$LOCATION"
           set_opt serverType "$SERVER_TYPE"
           set_opt backups "$BACKUPS"

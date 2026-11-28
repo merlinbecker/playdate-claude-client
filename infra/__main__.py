@@ -19,7 +19,7 @@ from __future__ import annotations
 import pulumi
 
 import cloud_init
-from settings import Settings, parse_role_repos, split_list
+from settings import Settings, parse_role_repos, parse_role_types, split_list
 
 
 def load_settings() -> Settings:
@@ -39,6 +39,7 @@ def load_settings() -> Settings:
     settings.repo_ref = cfg.get("repoRef") or settings.repo_ref
     settings.roles = split_list(cfg.get("roles")) or settings.roles
     settings.role_repos = parse_role_repos(cfg.get("roleRepos"))
+    settings.role_types = parse_role_types(cfg.get("roleTypes"))
     swap = cfg.get_int("swapGb")
     settings.swap_gb = settings.swap_gb if swap is None else swap
     settings.validate()

@@ -38,6 +38,24 @@ def parse_role_repos(value: str | None) -> dict[str, str]:
     return repos
 
 
+ROLE_TYPES = {"bauen", "wissen"}
+
+
+def parse_role_types(value: str | None) -> dict[str, str]:
+    """Liest Paare `rolle=typ`, getrennt durch Komma, Leerzeichen oder Zeilen."""
+    types: dict[str, str] = {}
+    for pair in split_list(value):
+        if "=" not in pair:
+            raise ValueError(f"roleTypes: Paar ohne '=': {pair!r}")
+        role, kind = pair.split("=", 1)
+        if not ROLE_NAME.match(role):
+            raise ValueError(f"roleTypes: ungültiger Rollenname {role!r}")
+        if kind not in ROLE_TYPES:
+            raise ValueError(f"roleTypes: unbekannter Typ {kind!r} (verfügbar: {', '.join(sorted(ROLE_TYPES))})")
+        types[role] = kind
+    return types
+
+
 @dataclass
 class Settings:
     tailscale_auth_key: str
@@ -52,6 +70,7 @@ class Settings:
     repo_ref: str = "main"
     roles: list[str] = field(default_factory=lambda: ["concierge"])
     role_repos: dict[str, str] = field(default_factory=dict)
+    role_types: dict[str, str] = field(default_factory=dict)
     swap_gb: int = 2
 
     def validate(self) -> None:
@@ -64,6 +83,9 @@ class Settings:
         for role in self.roles:
             if not ROLE_NAME.match(role):
                 raise ValueError(f"roles: ungültiger Rollenname {role!r} (a-z, 0-9, -)")
+        unknown_types = set(self.role_types) - set(self.roles)
+        if unknown_types:
+            raise ValueError(f"roleTypes nennt Rollen, die nicht in roles stehen: {sorted(unknown_types)}")
         unknown = set(self.role_repos) - set(self.roles)
         if unknown:
             raise ValueError(f"roleRepos nennt Rollen, die nicht in roles stehen: {sorted(unknown)}")

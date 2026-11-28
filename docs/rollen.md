@@ -40,12 +40,30 @@ flowchart LR
 
 ## Die Rollen
 
-| Rolle | Aufgabe | Arbeitsverzeichnis |
-| --- | --- | --- |
-| **Concierge** | Einziger Gesprächspartner. Nimmt Sprache und Text an, bereinigt und ordnet, beantwortet Kleinigkeiten selbst, verteilt alles andere an die zuständige Rolle, sammelt Ergebnisse und Rückfragen und meldet sie zurück. Pflegt das Lagebild. | Eigener kleiner Workspace mit Lesezugriff auf die anderen (`--add-dir`) |
-| Rollen-Agent | Arbeitet Aufträge aus seiner Inbox ab, in seinem Fachgebiet, mit seinen Skills und Regeln. Meldet Ergebnisse und Rückfragen an den Concierge. | Eigenes Repo bzw. eigener Workspace |
+Rollen haben einen **Typ**, der festlegt, welche Vorlage für ihre `CLAUDE.md` verwendet wird. Den **Namen** einer Rolle wählt jede Instanz selbst; er steht nur auf dem Server, nie im Repo. Die Zuordnung Name → Typ steht in `POCKET_CONCIERGE_ROLE_TYPES`, z. B. `meinbauer=bauen notizen=wissen`.
 
-Der Concierge entspricht dem Intake-Agenten aus der Architektur, ergänzt um Verteilung und Rückmeldung. Man kann jede Rolle-Sitzung auch direkt öffnen, etwa für eine längere Arbeitssitzung. Der normale Weg führt aber über den Concierge.
+| Typ | Aufgabe | Arbeitsverzeichnis | Zugänge | Vorlage |
+| --- | --- | --- | --- | --- |
+| **Concierge** (fest, Name `concierge`) | Einziger Pflicht-Gesprächspartner. Nimmt Sprache und Text an, bereinigt und ordnet, beantwortet Kleinigkeiten selbst, verteilt alles andere, sammelt Ergebnisse und Rückfragen, pflegt das Lagebild, erzeugt Cheat-Sheet-Ausgaben für Geräte. | `~/roles/concierge` | keine externen | [`templates/concierge`](../host/templates/concierge/CLAUDE.md) |
+| **Bauen** | Baut und pflegt Software-Projekte in Git-Repos: Funktionen, Fehler, Doku, Pull Requests. Mehrere Repos gleichzeitig, eins pro Unterordner, mit einer Projektliste `projekte.md`. Baut auch Pocket Concierge selbst weiter. | `~/roles/<name>/<repo>` je Projekt | `git` und `gh` mit fine-grained PAT, nur für freigegebene Repos | [`templates/bauen`](../host/templates/bauen/CLAUDE.md) |
+| **Wissen** | Verwaltet Notizen und Wissen: aufnehmen, einordnen, verknüpfen, verdichten, wiederfinden. Typischerweise ein eigenes Notiz-Repo mit eigenen Skills. | `~/roles/<name>`, oft selbst ein Repo (über `POCKET_CONCIERGE_ROLE_REPOS`) | Git-Zugang zum Notiz-Repo | [`templates/wissen`](../host/templates/wissen/CLAUDE.md) |
+| Allgemein | Jede andere Rolle; Zuständigkeit beschreibt man selbst. | `~/roles/<name>` | je nach Bedarf | [`templates/role`](../host/templates/role/CLAUDE.md) |
+
+**Eine oder mehrere Bau-Rollen?** Eine Bau-Rolle reicht für viele Repos; sie arbeitet ein Gespräch nach dem anderen ab und kann für Teilaufgaben selbst Subagenten starten. Eine zweite Bau-Rolle lohnt sich erst, wenn zwei große Projekte wirklich gleichzeitig laufen sollen und ihre Kontexte getrennt bleiben müssen. Alle Rollen teilen sich dieselbe Quota.
+
+**Direkt oder über den Concierge?** Beides ist vorgesehen:
+
+- **Direkt**, wenn man gezielt arbeitet, etwa an einem Projekt mit der Bau-Rolle. Man öffnet deren Sitzung in der Claude-App oder unter claude.ai/code. Kein Umweg, weniger Quota.
+- **Über den Concierge**, wenn man unterwegs etwas ablegt oder den Überblick will. Er verteilt per Inbox; die Rolle arbeitet es ab, wenn sie dran ist.
+
+Der Concierge entspricht dem Intake-Agenten aus der Architektur, ergänzt um Verteilung und Rückmeldung.
+
+### Zugang der Bau-Rolle zu GitHub
+
+- Ein **fine-grained Personal Access Token** (PAT), beschränkt auf ausgewählte Repos, mit den Rechten *Contents*, *Pull requests* und *Issues* (Lesen und Schreiben) sowie *Metadata* (Lesen), mit Ablaufdatum.
+- Auf dem Server mit `gh auth login --with-token` angemeldet; `gh auth setup-git` lässt auch `git` das Token nutzen.
+- **Kommt ein Repo dazu, muss das PAT erweitert werden:** In GitHub beim Token unter *Repository access* das Repo hinzufügen. Auf dem Server ändert sich nichts, solange das Token dasselbe bleibt. Wird es neu erzeugt (etwa nach Ablauf), erneut `gh auth login` ausführen.
+- Später übernimmt der Rechte- und Tool-Broker das Token; dann liegt es nicht mehr auf dem Server.
 
 ## Der Concierge als Stimme nach außen
 

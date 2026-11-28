@@ -42,7 +42,7 @@ flowchart LR
 3. **Antworten passen aufs Gerät.** Der Agent beschreibt Ergebnisse geräteunabhängig. Adapter machen daraus eine HTML-Seite, eine 1-Bit-Karte für den Playdate, ein paar Zeilen für die Brille oder ein Bild für das E-Ink-Display.
 4. **Bedienbar ohne Sprache.** Ein Lagebild-Subagent liefert zu allem eine Kurzfassung und auswählbare nächste Schritte.
 5. **Werkzeuge nur über den Broker.** Der Agent hat keine eigenen Zugänge. Ein Rechte- und Tool-Broker hält die Tokens, gibt dem Agenten genau einen MCP-Server und entscheidet pro Tool: erlaubt, verboten oder nur nach Bestätigung.
-6. **Ein Concierge, mehrere Rollen.** Man spricht nur mit dem Concierge. Er verteilt Aufträge über Inboxen an Rollen-Agenten mit eigenem Fachgebiet, etwa Wissen oder Code, die jeweils in ihrer eigenen Sitzung laufen ([`docs/rollen.md`](docs/rollen.md)).
+6. **Ein Concierge, mehrere Rollen.** Unterwegs spricht man mit dem Concierge; er verteilt Aufträge über Inboxen an Rollen in eigenen Sitzungen. Mitgeliefert sind zwei Rollentypen: eine **Bau-Rolle**, die Software-Projekte in mehreren Git-Repos baut (auch Pocket Concierge selbst), und eine **Wissens-Rolle** für Notizen und Wissen. Für gezielte Arbeit öffnet man eine Rolle auch direkt ([`docs/rollen.md`](docs/rollen.md)).
 7. **Nachts Wartung.** Der Agent geht den Tag durch, fasst zusammen, pflegt sein Gedächtnis und plant den nächsten Tag.
 
 ## Prinzipien

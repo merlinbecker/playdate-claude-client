@@ -417,15 +417,27 @@ Der Agent beschreibt Ausgaben geräteunabhängig: Titel, eine Kernaussage, optio
 
 ### Rollen und Sitzungen
 
-Der Agent läuft als mehrere Rollen in getrennten Claude-Code-Sitzungen: ein **Concierge** als einziger Gesprächspartner und dahinter Rollen-Agenten mit eigenem Arbeitsverzeichnis, eigenen Skills und eigener Inbox. Rollen kommunizieren nur über Inboxen. systemd und tmux halten die Sitzungen am Laufen und setzen sie nach einem Neustart fort. Details: [`rollen.md`](rollen.md).
+Der Agent läuft als mehrere Rollen in getrennten Claude-Code-Sitzungen, jede mit eigenem Arbeitsverzeichnis, eigener `CLAUDE.md` und eigener Inbox. Rollen kommunizieren nur über Inboxen. systemd und tmux halten die Sitzungen am Laufen und setzen sie nach einem Neustart fort. Details: [`rollen.md`](rollen.md).
+
+| Rollentyp | Aufgabe | Zugänge |
+| --- | --- | --- |
+| Concierge | Annehmen, ordnen, verteilen, Lagebild, Ausgaben für Geräte | keine externen |
+| Bauen | Software-Projekte in Git-Repos, mehrere gleichzeitig; baut auch Pocket Concierge weiter | `git`/`gh` mit fine-grained PAT für freigegebene Repos |
+| Wissen | Notizen aufnehmen, verknüpfen, verdichten, wiederfinden | Git-Zugang zum Notiz-Repo |
+| Allgemein | frei beschreibbar | nach Bedarf |
+
+Rollennamen wählt jede Instanz selbst (`POCKET_CONCIERGE_ROLES`), den Typ legt `POCKET_CONCIERGE_ROLE_TYPES` fest. Der Nutzer spricht unterwegs mit dem Concierge und für gezielte Arbeit direkt mit einer Rolle.
 
 ```mermaid
 flowchart LR
-    N[Nutzer] --> C[Concierge]
-    C -->|inbox| A[Rollen-Agent A]
-    C -->|inbox| B[Rollen-Agent B]
-    A & B -->|inbox| C
-    B -.->|inbox| A
+    N[Nutzer] -->|unterwegs| C[Concierge]
+    N -.->|gezielte Arbeit| B
+    C -->|inbox| B[Bau-Rolle]
+    C -->|inbox| W[Wissens-Rolle]
+    B & W -->|inbox| C
+    B -.->|Frage| W
+    B --> GH[(GitHub-Repos)]
+    W --> NR[(Notiz-Repo)]
 ```
 
 ### Gedächtnis
@@ -476,6 +488,8 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 18 | Server wird nach dem Anlegen nicht neu gebaut; Updates per `pocket-update` | Anmeldungen, Sitzungen und Inboxen bleiben erhalten |
 | 19 | Web-Kartensimulator vor dem Playdate | Karten und Ablauf schneller iterieren; Server und Karten-DSL werden für den Playdate weiterverwendet |
 | 20 | Zugang nur über Tailscale, kein SSH von außen, keine SSH-Schlüssel | Keine IP-Pflege bei wechselnden Anschlüssen; Zugriff von allen eigenen Geräten; Notfall über die Hetzner-Konsole |
+| 21 | Rollentypen (Bauen, Wissen, Allgemein) mit Vorlagen; Namen nur auf dem Server | Wiederverwendbare Rollen im öffentlichen Repo, persönliche Namen und Inhalte bleiben privat |
+| 22 | Bau-Rolle mit fine-grained PAT und `gh` statt GitHub-MCP | Lokaler Klon für Tests und Commits; PAT auf ausgewählte Repos beschränkt; MCP erst mit dem Broker |
 
 ## 10. Qualitätsszenarien
 
