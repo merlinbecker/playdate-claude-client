@@ -3,6 +3,9 @@
 ## Projekt
 Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Teil von Pocket Concierge, einem 24/7-Assistenten auf Basis von Claude Code. Architektur des POC: `docs/arc42.md`, Vision und Scope: `docs/vision.md`.
 
+## Arbeitsweise
+Spec-Driven Development mit [GitHub Spec Kit](https://github.com/github/spec-kit): Grundsätze in `.specify/memory/constitution.md`, Features unter `specs/`. Ablauf: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Kein Code ohne Spec und Plan.
+
 ## Sprache
 Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisch.
 
