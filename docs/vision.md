@@ -6,7 +6,8 @@
 
 **Arborist** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einer Azure-VM. Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
 
-- **Immer da:** Der Agent läuft 24/7. Die Kommunikation darf asynchron sein.
+- **Ideen abladen, später abarbeiten:** Eingaben werden sofort und sicher gespeichert. Wann der Agent sie bearbeitet, ist zweitrangig. Er arbeitet asynchron, in Schleifen und in Batches.
+- **Immer erreichbar:** Der Eingang ist 24/7 offen. Der Agent arbeitet im Rahmen der Abo-Quota; ist sie aufgebraucht, wartet er bis zum wöchentlichen Reset.
 - **Sprache zuerst:** Sprache ist das Hauptmedium. Jede Interaktion geht aber auch ohne Sprache, über vorbereitete Antworten und Themen.
 - **Viele Geräte:** Registrierte Endgeräte greifen auf denselben Agenten zu.
 - **Kontrollierte Werkzeuge:** Der Agent bekommt externe Tools nur über einen Rechte- und Tool-Broker, nie direkt.
@@ -34,7 +35,7 @@ flowchart LR
     EXT[Externe Dienste<br/>MCP-Server, APIs]
 
     PD & WEB & PH <--> GW
-    GW --> IN --> AR
+    GW --> Q[(Eingangs-Queue)] --> IN --> AR
     AR <--> SA
     AR --> CS --> GW
     AR -- ein lokaler MCP-Server --> BR --> EXT
@@ -62,25 +63,46 @@ Einziger Eingang für Geräte.
 - **Adapter:** Übersetzen ein generisches Ausgabeformat in Karte, HTML oder Text.
 - **Registry:** Geräte, Tokens, Fähigkeiten, zuletzt gesehen.
 
-### 3.3 Intake-Agent
+### 3.3 Eingangs-Queue
+
+Das Herz des asynchronen Ablaufs. Alles, was ankommt, landet hier – dauerhaft gespeichert, bevor irgendein Modell beteiligt ist.
+
+- **Sicher ablegen:** Eine Eingabe gilt als angenommen, sobald sie in der Queue steht. Das Gerät bekommt sofort eine Quittung („abgelegt“), unabhängig davon, ob der Agent gerade läuft oder die Quota leer ist.
+- **Zustände:** `received → transcribed → prepared → queued → in_progress → done/parked`. Geparkt wird, was auf Rückfrage, Bestätigung oder den Quota-Reset wartet.
+- **Batchweise abarbeiten:** Der Arborist holt sich mehrere Einträge auf einmal, gruppiert sie nach Projekt und Thema und arbeitet sie zusammen ab. Das spart Kontext und Quota.
+- **Wiederholbar:** Einträge bleiben nach der Bearbeitung erhalten (Verlauf fürs Dashboard und die Nachtwartung).
+- **Priorität:** Der Intake-Agent markiert Dringendes; dringende Einträge werden vor dem nächsten Batch gezogen.
+
+**Technikwahl (offen):**
+
+| Option | Passt, weil | Dagegen |
+| --- | --- | --- |
+| SQLite (wie im POC) | Null Betrieb, reicht für eine Person, Zustände und Verlauf in einer Tabelle | Nur ein Schreiber, kein Fan-out |
+| Redis Streams oder NATS JetStream | Leichtgewichtig, Consumer-Gruppen, Replays, Batch-Abholung | Ein Dienst mehr |
+| Azure Service Bus / Storage Queue | Verwaltet, überlebt VM-Ausfälle | Kosten, Cloud-Abhängigkeit, kein Verlauf |
+| Kafka | Starke Log-Semantik, Replays | Für einen Nutzer und wenige Nachrichten pro Tag deutlich überdimensioniert |
+
+Empfehlung zum Start: SQLite mit sauberem Zustandsmodell hinter einer kleinen Queue-Schnittstelle. Wird Fan-out oder Entkopplung über Container wichtig, auf NATS JetStream oder Redis Streams wechseln. Kafka nur, wenn das Volumen es wirklich verlangt.
+
+### 3.4 Intake-Agent
 
 Steht vor dem Arborist und macht aus Rohdaten eine saubere Anweisung.
 
 - Transkribiert Sprache über einen austauschbaren Provider: lokal (Whisper) oder Voxtral-API.
 - Bereinigt Füllwörter, erkennt Sprache, Bezug auf laufende Themen und Dringlichkeit.
-- Legt das Ergebnis als Auftrag in die Queue des Arborist.
+- Schreibt das Ergebnis als vorbereiteten Auftrag zurück in die Eingangs-Queue.
 - Darf ein kleines, günstiges Modell nutzen. Er hat keine Tools außer der Queue.
 
-### 3.4 Arborist (Main-Agent)
+### 3.5 Arborist (Main-Agent)
 
 Claude Code CLI, dauerhaft laufend, mit fortgesetzter Session.
 
-- Nimmt Aufträge aus der Queue an und entscheidet, welches Projekt betroffen ist.
+- Arbeitet in Schleifen: holt einen Batch aus der Eingangs-Queue, ordnet die Einträge Projekten zu, bearbeitet sie und holt den nächsten Batch, bis die Queue leer ist.
 - Delegiert an **Projekt-Subagenten**, je einer pro Projekt bzw. Bereich (z. B. To-dos, ein Code-Projekt, Recherche). Mehrere Projekte laufen parallel.
 - Hält den Überblick: offene Aufgaben, laufende Subagenten, Wiedervorlagen. Stößt periodisch selbst Arbeit an.
 - Arbeitet in sich abgeschlossen in seinem Container. Externe Dienste erreicht er nur über den Broker.
 
-### 3.5 Lagebild-Subagent
+### 3.6 Lagebild-Subagent
 
 Läuft immer mit und macht den Agenten auch ohne Sprache bedienbar.
 
@@ -89,7 +111,7 @@ Läuft immer mit und macht den Agenten auch ohne Sprache bedienbar.
 - Pflegt eine Liste der **aktuellen Themen des Tages**, die man auf einem Handheld auswählen kann.
 - Gibt alles im generischen Ausgabeformat ans Gateway, das es pro Gerät rendert.
 
-### 3.6 Rechte- und Tool-Broker
+### 3.7 Rechte- und Tool-Broker
 
 Der Agent bekommt **keine eigenen Tool-Anbindungen**. Alles Externe läuft über den Broker.
 
@@ -110,14 +132,14 @@ Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im A
 
 ## 5. Betriebsmodi und Nutzungslimits
 
-Claude Code mit Abo darf auf der eigenen VM laufen, solange man sich selbst über den offiziellen Anmeldeweg einloggt und das unveränderte Claude Code nutzt. Die Limits des Abos (Fünf-Stunden-Fenster und Wochenlimit) sind aber auf gewöhnliche, individuelle Nutzung ausgelegt. Ein Dauerbetrieb mit ständigen Aufrufen ist damit nicht gewährleistet. Arborist ist deshalb **ereignisgesteuert** und spart Kontingent:
+Claude Code mit Abo darf auf der eigenen VM laufen, solange man sich selbst über den offiziellen Anmeldeweg einloggt und das unveränderte Claude Code nutzt. Die Limits des Abos (Fünf-Stunden-Fenster und Wochenlimit) sind aber auf gewöhnliche, individuelle Nutzung ausgelegt. Ein Dauerbetrieb mit ständigen Aufrufen ist damit nicht gewährleistet – und muss es auch nicht sein. Arborist bleibt bewusst im Rahmen der Quota und ist **ereignisgesteuert**:
 
 | Modus | Wann | Verhalten |
 | --- | --- | --- |
-| Aktiv | Tagsüber, bei Aufträgen | Verarbeitet Aufträge, Subagenten arbeiten, Lagebild wird aktualisiert |
+| Aktiv | Queue enthält Einträge | Arbeitet Batches ab, Subagenten arbeiten, Lagebild wird aktualisiert |
 | Leerlauf | Keine Aufträge | Keine Modellaufrufe. Gateway, Broker und Queue laufen weiter und nehmen Eingaben an |
 | Nachtwartung | Einmal nachts, zeitgesteuert | Sichtet die Aufgaben des Tages, schreibt Zusammenfassungen und Wiedervorlagen, pflegt das eigene Gedächtnis (Projektdateien, gelernte Vorlieben), plant den nächsten Tag; danach Leerlauf |
-| Limit-Schonmodus | Kontingent knapp oder erschöpft | Nimmt Aufträge weiter an, bestätigt per Karte „eingereiht“, arbeitet nach dem Reset weiter. Optional: Überlauf auf API-Key mit Budgetgrenze |
+| Quota leer | Kontingent aufgebraucht | Agent pausiert. Eingang und Queue laufen weiter, Geräte bekommen „abgelegt“. Nach dem Reset wird die Queue abgearbeitet. Kein Überlauf auf API-Abrechnung |
 
 Regeln:
 
@@ -148,7 +170,7 @@ Regeln:
 
 1. **POC lokal:** Playdate → Ingest → Transkription → einfacher Agent → Karten (siehe [`poc-setup.md`](poc-setup.md)).
 2. **VM-Basis:** Pulumi-Stack, Docker, Arborist läuft 24/7, Web-Terminal, Scheduler mit Nachtwartung.
-3. **Gateway und Lagebild:** Registry, Push, Dashboard, Lagebild-Subagent mit Auswahl-Antworten.
+3. **Eingangs-Queue, Gateway und Lagebild:** Asynchroner Eingang mit Quittung und Batch-Abarbeitung, Registry, Push, Dashboard, Lagebild-Subagent mit Auswahl-Antworten.
 4. **Broker:** Erster Tool-Zugang (z. B. To-do-Dienst) ausschließlich über den Broker, Bestätigungen per Karte.
 5. **Projekt-Subagenten:** Parallele Projekte, Wiedervorlagen, periodische Selbststeuerung.
 
@@ -156,6 +178,7 @@ Regeln:
 
 - **Abo im Dauerbetrieb:** Stand November 2026 zählen auch Headless-Aufrufe (`claude -p`) und das Agent SDK auf die Abo-Limits; eine angekündigte Trennung wurde im Juni 2026 pausiert. Bedingungen regelmäßig prüfen, weil sich das ändern kann.
 - **Broker:** Selbst bauen oder ein bestehendes MCP-Gateway als Basis nehmen?
-- **Queue:** SQLite reicht für eine Person; später ggf. Redis oder Azure Service Bus.
+- **Queue-Technik:** SQLite zum Start, später NATS JetStream oder Redis Streams? Kafka nur bei echtem Bedarf (siehe 3.3).
+- **Batch-Größe und Takt:** Wie viele Einträge pro Batch, und wie schnell nach einer neuen Eingabe startet die Bearbeitung?
 - **Intake-Modell:** Welches Modell bereitet die Anweisungen auf, und läuft es lokal oder per API?
 - **Persistenz des Agenten:** Wie übersteht der Kontext Neustarts und lange Laufzeiten (Session-Wechsel, Zusammenfassungen, Projektdateien)?
