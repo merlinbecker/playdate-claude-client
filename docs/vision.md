@@ -108,7 +108,25 @@ Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im A
 - **Zugriff:** HTTPS über Reverse Proxy; Gerätetoken pro Gerät.
 - **Mehrere Instanzen:** Der Stack ist parametrisierbar, damit sich getrennte Instanzen betreiben lassen. Eine Arbeits-Instanz nur mit Freigabe des Arbeitgebers.
 
-## 5. Scope
+## 5. Betriebsmodi und Nutzungslimits
+
+Claude Code mit Abo darf auf der eigenen VM laufen, solange man sich selbst über den offiziellen Anmeldeweg einloggt und das unveränderte Claude Code nutzt. Die Limits des Abos (Fünf-Stunden-Fenster und Wochenlimit) sind aber auf gewöhnliche, individuelle Nutzung ausgelegt. Ein Dauerbetrieb mit ständigen Aufrufen ist damit nicht gewährleistet. Arborist ist deshalb **ereignisgesteuert** und spart Kontingent:
+
+| Modus | Wann | Verhalten |
+| --- | --- | --- |
+| Aktiv | Tagsüber, bei Aufträgen | Verarbeitet Aufträge, Subagenten arbeiten, Lagebild wird aktualisiert |
+| Leerlauf | Keine Aufträge | Keine Modellaufrufe. Gateway, Broker und Queue laufen weiter und nehmen Eingaben an |
+| Nachtwartung | Einmal nachts, zeitgesteuert | Sichtet die Aufgaben des Tages, schreibt Zusammenfassungen und Wiedervorlagen, pflegt das eigene Gedächtnis (Projektdateien, gelernte Vorlieben), plant den nächsten Tag; danach Leerlauf |
+| Limit-Schonmodus | Kontingent knapp oder erschöpft | Nimmt Aufträge weiter an, bestätigt per Karte „eingereiht“, arbeitet nach dem Reset weiter. Optional: Überlauf auf API-Key mit Budgetgrenze |
+
+Regeln:
+
+- Kein Polling durch das Modell. Zeitgesteuerte Arbeit (Nachtwartung, Wiedervorlagen) startet ein Scheduler außerhalb des Agenten.
+- Die Nachtwartung hat ein festes Budget, weil sie auf dasselbe Wochenlimit zählt.
+- Ein API-Key wird nie als Umgebungsvariable im Agent-Container gesetzt, solange das Abo genutzt werden soll; Claude Code würde ihn sonst bevorzugen.
+- Der Broker verwaltet nur Tokens externer Dienste, nie die Claude-Anmeldung.
+
+## 6. Scope
 
 **Drin:**
 
@@ -126,17 +144,17 @@ Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im A
 - Eigene native Handy-App
 - Weitere Geräte wie E-Ink (später über Adapter)
 
-## 6. Ausbaustufen
+## 7. Ausbaustufen
 
 1. **POC lokal:** Playdate → Ingest → Transkription → einfacher Agent → Karten (siehe [`poc-setup.md`](poc-setup.md)).
-2. **VM-Basis:** Pulumi-Stack, Docker, Arborist läuft 24/7, Web-Terminal.
+2. **VM-Basis:** Pulumi-Stack, Docker, Arborist läuft 24/7, Web-Terminal, Scheduler mit Nachtwartung.
 3. **Gateway und Lagebild:** Registry, Push, Dashboard, Lagebild-Subagent mit Auswahl-Antworten.
 4. **Broker:** Erster Tool-Zugang (z. B. To-do-Dienst) ausschließlich über den Broker, Bestätigungen per Karte.
 5. **Projekt-Subagenten:** Parallele Projekte, Wiedervorlagen, periodische Selbststeuerung.
 
-## 7. Offene Fragen
+## 8. Offene Fragen
 
-- **Abo im Dauerbetrieb:** Ob und wie Claude Code mit einem Abo dauerhaft und unbeaufsichtigt laufen darf, und welche Nutzungslimits gelten, in den aktuellen Bedingungen von Anthropic prüfen.
+- **Abo im Dauerbetrieb:** Stand November 2026 zählen auch Headless-Aufrufe (`claude -p`) und das Agent SDK auf die Abo-Limits; eine angekündigte Trennung wurde im Juni 2026 pausiert. Bedingungen regelmäßig prüfen, weil sich das ändern kann.
 - **Broker:** Selbst bauen oder ein bestehendes MCP-Gateway als Basis nehmen?
 - **Queue:** SQLite reicht für eine Person; später ggf. Redis oder Azure Service Bus.
 - **Intake-Modell:** Welches Modell bereitet die Anweisungen auf, und läuft es lokal oder per API?
