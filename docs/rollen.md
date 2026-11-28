@@ -65,6 +65,18 @@ Der Concierge entspricht dem Intake-Agenten aus der Architektur, ergänzt um Ver
 - **Kommt ein Repo dazu, muss das PAT erweitert werden:** In GitHub beim Token unter *Repository access* das Repo hinzufügen. Auf dem Server ändert sich nichts, solange das Token dasselbe bleibt. Wird es neu erzeugt (etwa nach Ablauf), erneut `gh auth login` ausführen.
 - Später übernimmt der Rechte- und Tool-Broker das Token; dann liegt es nicht mehr auf dem Server.
 
+## Gedächtnis des Concierge
+
+Der Concierge merkt sich alles in Dateien: `ich.md` (über den Nutzer), `todos.md`, `lagebild.md`, `tagebuch/`. Sein Arbeitsverzeichnis ist ein **eigenes privates Git-Repo**, das er selbst committet und pusht. Die Bau-Rolle ist dafür nicht zuständig; jede Notiz über sie zu leiten, kostete doppelt Quota und Zeit.
+
+- Neue Instanz: Repo-URL in `POCKET_CONCIERGE_ROLE_REPOS` als `concierge=<url>` angeben, dann klont die Einrichtung es.
+- Bestehende Instanz: leeres privates Repo anlegen, im PAT freigeben, den Concierge sein Verzeichnis selbst zum Repo machen lassen.
+- Was nur auf dem Server bleiben soll, legt er in `lokal/`; das wird nie committet.
+
+## Weiterentwickeln im Betrieb
+
+Pocket Concierge entwickelt sich über die eigenen Rollen weiter: Der Nutzer äußert Wünsche beim Concierge oder direkt bei der Bau-Rolle. Die Bau-Rolle ändert das Repo `pocket-concierge` und pusht. Betrifft die Änderung den Server, spielt der Concierge sie nach Bestätigung des Nutzers mit `sudo pocket-update` ein. Vorlagen wirken nur auf neue Rollen; bestehende `CLAUDE.md`-Dateien gehören der jeweiligen Rolle und werden nicht automatisch überschrieben.
+
 ## Der Concierge als Stimme nach außen
 
 Der Concierge ist nicht nur Eingang, sondern auch die einzige Stelle, die Ausgaben für Geräte erzeugt. Er ist so eingestellt, dass er:

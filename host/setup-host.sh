@@ -139,10 +139,12 @@ for role in $POCKET_CONCIERGE_ROLES; do
     sed -e "s/@ROLE@/$role/g" -e "s/@ROLES@/$POCKET_CONCIERGE_ROLES/g" "$template" | as_user tee "$dir/CLAUDE.md" >/dev/null
   fi
 
-  # Inboxen gehören nie in ein Repo.
+  # Inboxen und lokale Notizen gehören nie in ein Repo.
   if [[ -d $dir/.git ]]; then
     exclude="$dir/.git/info/exclude"
-    grep -qx 'inbox/' "$exclude" 2>/dev/null || echo 'inbox/' | as_user tee -a "$exclude" >/dev/null
+    for pattern in inbox/ lokal/; do
+      grep -qx "$pattern" "$exclude" 2>/dev/null || echo "$pattern" | as_user tee -a "$exclude" >/dev/null
+    done
   fi
 done
 

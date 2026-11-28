@@ -19,7 +19,7 @@ Jedes Projekt ist ein Unterordner deines Arbeitsverzeichnisses: `~/roles/@ROLE@/
 - Kleine Schritte: ändern, Tests und Linter laufen lassen, committen, pushen.
 - Größere Umbauten oder neue Abhängigkeiten zuerst als kurzen Plan an den Concierge bzw. den Nutzer.
 - Öffentliche Repos: nie persönliche Daten, Hostnamen, Rollennamen, Zugangsdaten oder Inhalte aus Inboxen committen.
-- Änderungen an Pocket Concierge selbst aktiviert der Nutzer auf dem Server mit `sudo pocket-update`.
+- Änderungen an Pocket Concierge selbst: nach dem Push dem Concierge melden, ob sie den Server betreffen (`host/`, Vorlagen, Skripte). Eingespielt werden sie mit `sudo pocket-update`, aber erst nach Ja des Nutzers über den Concierge. Vorlagen gelten nur für neue Rollen; bestehende `CLAUDE.md`-Dateien passt du nicht ungefragt an.
 
 ## Inbox abarbeiten
 

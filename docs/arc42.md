@@ -442,7 +442,7 @@ flowchart LR
 
 ### Gedächtnis
 
-Der Agent hält sein Wissen in Dateien im Workspace (Projekte, Vorlieben, offene Punkte). Die Nachtwartung fasst den Tag zusammen und räumt auf. Persönliche Inhalte liegen nie im Repo.
+Jede Rolle hält ihr Wissen in Dateien in ihrem Arbeitsverzeichnis, nicht nur im Gesprächsverlauf. Der Concierge führt `ich.md` (über den Nutzer), `todos.md`, `lagebild.md` und ein Tagebuch. Sein Verzeichnis ist ein **eigenes privates Git-Repo**, das er selbst committet und pusht – nach größeren Änderungen und spätestens in der Nachtwartung. So gibt es Verlauf und eine Sicherung außerhalb des Servers. Was nur lokal bleiben soll, liegt in `lokal/` und wird nie committet. Persönliche Inhalte liegen nie im öffentlichen Pocket-Concierge-Repo.
 
 ### Audioformat (Playdate)
 
@@ -490,6 +490,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 20 | Zugang nur über Tailscale, kein SSH von außen, keine SSH-Schlüssel | Keine IP-Pflege bei wechselnden Anschlüssen; Zugriff von allen eigenen Geräten; Notfall über die Hetzner-Konsole |
 | 21 | Rollentypen (Bauen, Wissen, Allgemein) mit Vorlagen; Namen nur auf dem Server | Wiederverwendbare Rollen im öffentlichen Repo, persönliche Namen und Inhalte bleiben privat |
 | 22 | Bau-Rolle mit fine-grained PAT und `gh` statt GitHub-MCP | Lokaler Klon für Tests und Commits; PAT auf ausgewählte Repos beschränkt; MCP erst mit dem Broker |
+| 23 | Gedächtnis des Concierge als eigenes privates Repo, vom Concierge selbst gepflegt | Häufige kleine Änderungen ohne Umweg über die Bau-Rolle; Verlauf und Sicherung außerhalb des Servers |
 
 ## 10. Qualitätsszenarien
 
