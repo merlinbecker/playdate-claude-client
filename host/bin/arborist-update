@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Holt den aktuellen Stand dieses Repos auf den Host und richtet ihn neu ein.
+# Laufende Rollen-Sitzungen werden nicht neu gestartet; nur der Watcher.
+#
+#   sudo arborist-update
+
+set -euo pipefail
+
+[[ $EUID -eq 0 ]] || exec sudo "$0" "$@"
+
+# shellcheck source=/dev/null
+source /etc/arborist/arborist.env
+checkout=/opt/arborist
+ref="${ARBORIST_REPO_REF:-main}"
+
+git -C "$checkout" fetch --quiet origin "$ref"
+git -C "$checkout" checkout --quiet "$ref"
+git -C "$checkout" reset --quiet --hard "origin/$ref"
+echo "Stand: $(git -C "$checkout" log -1 --format='%h %s')"
+
+exec bash "$checkout/host/setup-host.sh"

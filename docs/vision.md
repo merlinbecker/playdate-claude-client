@@ -4,7 +4,7 @@
 
 ## 1. Ziel
 
-**Arborist** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einer Azure-VM. Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
+**Arborist** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einem eigenen Server (Standard Hetzner Cloud). Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
 
 - **Ideen abladen, später abarbeiten:** Eingaben werden sofort und sicher gespeichert. Wann der Agent sie bearbeitet, ist zweitrangig. Er arbeitet asynchron, in Schleifen und in Batches.
 - **Immer erreichbar:** Der Eingang ist 24/7 offen. Der Agent arbeitet im Rahmen der Abo-Quota; ist sie aufgebraucht, wartet er bis zum wöchentlichen Reset.
@@ -25,7 +25,7 @@ flowchart LR
     GW[Device-Gateway<br/>Ingest + Push]
     IN[Intake-Agent<br/>Transkription + Aufbereitung]
 
-    subgraph VM[Azure-VM]
+    subgraph VM[Eigener Server]
         AR[Arborist<br/>Main-Agent, Claude Code]
         SA[Projekt-Subagenten]
         CS[Lagebild-Subagent<br/>Cheat Sheets + nächste Schritte]
@@ -126,7 +126,7 @@ Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im A
 
 ## 4. Betrieb
 
-- **Plattform:** Azure-VM (z. B. B2s: 2 vCPU, 4 GB RAM) mit Docker; Container für Gateway, Intake, Arborist und Broker.
+- **Plattform:** Kleiner Linux-Server (Standard Hetzner Cloud CX23: 2 vCPU, 4 GB RAM); Rollen als systemd-Dienste, später Container für Gateway, Intake und Broker.
 - **IaC:** Pulumi provisioniert VM, Netzwerk, Firewall (nur 443), Speicher und Secrets.
 - **Zugriff:** HTTPS über Reverse Proxy; Gerätetoken pro Gerät.
 - **Mehrere Instanzen:** Der Stack ist parametrisierbar, damit sich getrennte Instanzen betreiben lassen. Eine Arbeits-Instanz nur mit Freigabe des Arbeitgebers.
@@ -158,7 +158,7 @@ Regeln:
 - Device-Gateway mit Registry, Ingest und Push
 - Clients: Playdate, Web-UI (Dashboard und Terminal), Handy (über Web-UI)
 - Rechte- und Tool-Broker mit einem MCP-Server für den Agenten
-- Betrieb auf Azure-VM, provisioniert mit Pulumi
+- Betrieb auf eigenem Server, provisioniert mit Pulumi über GitHub (Standard Hetzner, Anbieter austauschbar)
 
 **Nicht drin (vorerst):**
 
@@ -169,12 +169,13 @@ Regeln:
 
 ## 7. Ausbaustufen
 
-1. **Bootstrap in der Cloud:** Claude Code mit Remote Control auf der Azure-VM, Bedienung vom Handy. Der Agent baut ab hier mit (siehe [`bootstrap.md`](bootstrap.md)).
-2. **Playdate-POC:** Ingest, Transkription, Karten.
-3. **Web-Dashboard:** Lagebild, Terminal, Scheduler mit Nachtwartung.
-4. **Eingangs-Queue, Gateway und Lagebild:** Asynchroner Eingang mit Quittung und Batch-Abarbeitung, Registry, Push, Lagebild-Subagent mit Auswahl-Antworten.
-5. **Broker:** Tools ausschließlich über den Broker, Bestätigungen per Ansicht.
-6. **Projekt-Subagenten und weitere Geräte:** Parallele Projekte, Wiedervorlagen, E-Ink, G1.
+1. **Bootstrap in der Cloud:** Concierge und Rollen mit Remote Control auf dem Server, Bedienung vom Handy. Der Agent baut ab hier mit (siehe [`bootstrap.md`](bootstrap.md)).
+2. **Web-Kartensimulator:** Display in Playdate-Größe im Browser, Spracheingabe, Karten je nach Thema.
+3. **Playdate-POC:** Dieselben Karten auf dem echten Gerät.
+4. **Web-Dashboard:** Lagebild, Terminal, Scheduler mit Nachtwartung.
+5. **Eingangs-Queue, Gateway und Lagebild:** Asynchroner Eingang mit Quittung und Batch-Abarbeitung, Registry, Push, Lagebild-Subagent mit Auswahl-Antworten.
+6. **Broker:** Tools ausschließlich über den Broker, Bestätigungen per Ansicht.
+7. **Projekt-Subagenten und weitere Geräte:** Parallele Projekte, Wiedervorlagen, E-Ink, G1.
 
 ## 8. Offene Fragen
 

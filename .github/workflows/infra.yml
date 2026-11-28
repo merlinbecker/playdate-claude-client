@@ -1,0 +1,113 @@
+# Richtet den Arborist-Server ein, ändert ihn oder baut ihn ab.
+#
+# Nur manuell startbar (Actions → Infrastruktur → Run workflow) und nur für den
+# Besitzer des Repos. Alle persönlichen Werte kommen aus Secrets und Variablen
+# der GitHub-Umgebung "infra"; im Repo selbst steht nichts Persönliches.
+# Details: infra/README.md
+
+name: Infrastruktur
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Aktion"
+        type: choice
+        options: [preview, up, destroy]
+        default: preview
+      stack:
+        description: "Pulumi-Stack (eine Instanz pro Stack)"
+        type: string
+        default: prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.event.inputs.stack }}
+  cancel-in-progress: false
+
+jobs:
+  pulumi:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    environment: infra
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      COMMAND: ${{ github.event.inputs.command }}
+      STACK: ${{ github.event.inputs.stack }}
+      # Zugang
+      HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      PULUMI_BACKEND_URL: ${{ vars.PULUMI_BACKEND_URL }}
+      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+      # Persönliche Werte
+      SSH_PUBLIC_KEY: ${{ vars.ARBORIST_SSH_PUBLIC_KEY }}
+      SSH_ALLOWED_CIDRS: ${{ secrets.ARBORIST_SSH_ALLOWED_CIDRS }}
+      ROLE_REPOS: ${{ secrets.ARBORIST_ROLE_REPOS }}
+      # Optionale Einstellungen (leer = Standard aus infra/settings.py)
+      ROLES: ${{ vars.ARBORIST_ROLES }}
+      LOCATION: ${{ vars.ARBORIST_LOCATION }}
+      SERVER_TYPE: ${{ vars.ARBORIST_SERVER_TYPE }}
+      BACKUPS: ${{ vars.ARBORIST_BACKUPS }}
+      SWAP_GB: ${{ vars.ARBORIST_SWAP_GB }}
+      REPO_REF: ${{ vars.ARBORIST_REPO_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pulumi und Abhängigkeiten installieren
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
+          python -m venv venv
+          venv/bin/pip install -q -r requirements.txt pytest
+
+      - name: Tests
+        run: venv/bin/python -m pytest -q
+
+      - name: Pflichtwerte prüfen
+        run: |
+          missing=()
+          [ -n "$HCLOUD_TOKEN" ] || missing+=("Secret HCLOUD_TOKEN")
+          [ -n "$PULUMI_ACCESS_TOKEN$PULUMI_BACKEND_URL" ] || missing+=("Secret PULUMI_ACCESS_TOKEN oder Variable PULUMI_BACKEND_URL")
+          [ -n "$SSH_PUBLIC_KEY" ] || missing+=("Variable ARBORIST_SSH_PUBLIC_KEY")
+          [ -n "$SSH_ALLOWED_CIDRS" ] || missing+=("Secret ARBORIST_SSH_ALLOWED_CIDRS")
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf '::error::Fehlt in der Umgebung "infra": %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+      - name: Stack und Konfiguration
+        run: |
+          if [ -n "$PULUMI_BACKEND_URL" ]; then pulumi login "$PULUMI_BACKEND_URL"; else pulumi login; fi
+          pulumi stack select --create "$STACK"
+
+          set_opt() { if [ -n "$2" ]; then pulumi config set "arborist:$1" -- "$2"; else pulumi config rm "arborist:$1" 2>/dev/null || true; fi; }
+          pulumi config set arborist:repoUrl -- "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          pulumi config set arborist:sshPublicKey -- "$SSH_PUBLIC_KEY"
+          pulumi config set --secret arborist:sshAllowedCidrs -- "$SSH_ALLOWED_CIDRS"
+          if [ -n "$ROLE_REPOS" ]; then pulumi config set --secret arborist:roleRepos -- "$ROLE_REPOS"; else pulumi config rm arborist:roleRepos 2>/dev/null || true; fi
+          set_opt roles "$ROLES"
+          set_opt location "$LOCATION"
+          set_opt serverType "$SERVER_TYPE"
+          set_opt backups "$BACKUPS"
+          set_opt swapGb "$SWAP_GB"
+          set_opt repoRef "$REPO_REF"
+
+      - name: Pulumi ${{ github.event.inputs.command }}
+        run: |
+          case "$COMMAND" in
+            preview) pulumi preview --diff ;;
+            # Server-Adressen sind Secrets und erscheinen hier nur maskiert.
+            # Abrufen lokal mit: pulumi stack output --show-secrets
+            # oder in der Hetzner-Konsole.
+            up)      pulumi up --yes --diff ;;
+            destroy) pulumi destroy --yes ;;
+            *) echo "Unbekannte Aktion: $COMMAND"; exit 1 ;;
+          esac

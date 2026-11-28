@@ -59,7 +59,8 @@ flowchart LR
 
 | Gerät | Status | Eingabe | Ausgabe |
 | --- | --- | --- | --- |
-| Web-Dashboard | geplant (Meilenstein 2) | Sprache, Text, Terminal | alles |
+| Web-Kartensimulator | als Nächstes (Meilenstein 2) | Sprache, Auswahl | 1-Bit-Karten in Playdate-Größe |
+| Web-Dashboard | geplant (Meilenstein 4) | Sprache, Text, Terminal | alles |
 | Playdate | POC in Arbeit | Sprache (auch offline gepuffert), Kurbel, Tasten | 1-Bit-Karten |
 | E-Ink-Display | geplant | – | Mini-Dashboard |
 | Even Realities G1 | geplant, über [MentraOS](https://github.com/Mentra-Community/MentraOS) | Sprache, Tasten | kurze Textansichten |
@@ -68,12 +69,13 @@ Der Playdate kann nur bei geöffneter App senden und empfangen; Aufnahmen werden
 
 ## Meilensteine
 
-1. **Bootstrap in der Cloud:** Claude Code läuft dauerhaft auf einer Azure-VM und wird per Remote Control vom Handy bedient, auch per Diktat. Ab hier baut der Agent den Rest selbst mit. Anleitung: [`docs/bootstrap.md`](docs/bootstrap.md).
-2. **Playdate-POC:** Sprechen → Upload → Transkription → Agent → Karte.
-3. **Web-Dashboard:** Lagebild, Terminal, Nachtwartung.
-4. **Queue, Gateway und Lagebild:** Asynchroner Eingang, generische Ansichten, nächste Schritte.
-5. **Broker:** To-dos, Kalender, Mail, GitHub – nur über den Broker.
-6. **Weitere Geräte:** E-Ink-Display, Even Realities G1.
+1. **Bootstrap in der Cloud:** Claude Code läuft dauerhaft auf einem eigenen Server (Standard Hetzner Cloud, eingerichtet per GitHub-Workflow) und wird per Remote Control vom Handy bedient, auch per Diktat. Ab hier baut der Agent den Rest selbst mit. Anleitung: [`docs/bootstrap.md`](docs/bootstrap.md).
+2. **Web-Kartensimulator:** Eine Webseite mit einem Display in Playdate-Größe (400×240, 1 Bit). Sprache aufnehmen, hochladen, und der Concierge antwortet mit Karten passend zum Thema – etwa eine Tageskarte mit To-dos zum Abhaken oder eine Tagesübersicht mit Terminen. Daran wird iteriert, bevor echte Hardware dazukommt.
+3. **Playdate-POC:** Dieselben Karten auf dem echten Gerät, mit Offline-Puffer.
+4. **Web-Dashboard:** Lagebild, Terminal, Nachtwartung.
+5. **Queue, Gateway und Lagebild:** Asynchroner Eingang, generische Ansichten, nächste Schritte.
+6. **Broker:** To-dos, Kalender, Mail, GitHub – nur über den Broker.
+7. **Weitere Geräte:** E-Ink-Display, Even Realities G1.
 
 ## Zum Diskutieren
 
@@ -101,6 +103,8 @@ Fragen, bei denen Gegenwind willkommen ist:
 
 | Pfad | Inhalt |
 | --- | --- |
+| `infra/` | Server per Pulumi anlegen (Standard Hetzner), gesteuert über GitHub-Workflow |
+| `host/` | Einrichtung des Servers: Rollen-Sitzungen, Inbox-Watcher, Vorlagen |
 | `server/` | Ingest-API, Transkription, Queue, Agent-Worker |
 | `playdate/` | Playdate-Client (Lua) |
 | `tools/fake_playdate.py` | Simuliert den Playdate vom Rechner aus |

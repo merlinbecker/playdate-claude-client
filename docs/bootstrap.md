@@ -1,10 +1,12 @@
 # Meilenstein 1: Bootstrap – Arborist läuft in der Cloud
 
-Ziel: So schnell wie möglich ein Claude Code, das dauerhaft auf einer Azure-VM läuft und sich vom Handy aus bedienen lässt – auch per Sprache. Der Rundlauf muss nicht perfekt sein. Wichtig ist, dass der Agent ab dann **sich selbst weiterbauen kann**: Gateway, Queue, Dashboard und Playdate-Anbindung entstehen in Gesprächen mit genau diesem Agenten.
+Ziel: So schnell wie möglich ein Claude Code, das dauerhaft auf einem eigenen Server läuft und sich vom Handy aus bedienen lässt – auch per Sprache. Der Rundlauf muss nicht perfekt sein. Wichtig ist, dass der Agent ab dann **sich selbst weiterbauen kann**: Web-Kartensimulator, Gateway, Queue und Playdate-Anbindung entstehen in Gesprächen mit genau diesem Agenten.
 
 ## Idee
 
-Für den Anfang wird nichts Eigenes gebaut, um an den Agenten heranzukommen. Claude Code bringt dafür **Remote Control** mit: Eine Claude-Code-Sitzung läuft auf der VM, und man steuert sie über [claude.ai/code](https://claude.ai/code) oder die Claude-App auf dem Handy. Remote Control gibt es für Pro- und Max-Abos und braucht keine eingehenden Verbindungen – die VM verbindet sich nur nach außen zu Anthropic.
+Für den Anfang wird nichts Eigenes gebaut, um an den Agenten heranzukommen. Claude Code bringt dafür **Remote Control** mit: Die Sitzungen laufen auf dem Server, und man steuert sie über [claude.ai/code](https://claude.ai/code) oder die Claude-App auf dem Handy. Remote Control gibt es für Pro- und Max-Abos und braucht keine eingehenden Verbindungen – der Server verbindet sich nur nach außen zu Anthropic.
+
+Auf dem Server laufen mehrere Rollen in eigenen Sitzungen: vorne der **Concierge**, mit dem man spricht, dahinter Rollen-Agenten, die über Inboxen Aufträge bekommen ([`rollen.md`](rollen.md)).
 
 ```mermaid
 flowchart LR
@@ -12,58 +14,73 @@ flowchart LR
     B[Browser<br/>claude.ai/code] --> A
     S[Laptop<br/>SSH] --> VM
     A <-->|nur ausgehend| VM
+    GH[GitHub Actions<br/>Pulumi] -->|legt an| VM
 
-    subgraph VM[Azure-VM]
+    subgraph VM[Server, Standard Hetzner Cloud]
         T[systemd + tmux] --> C[Concierge]
         T --> RA[Rollen-Agent A<br/>z. B. Wissen]
         T --> RB[Rollen-Agent B<br/>z. B. Bauen]
+        W[Watcher] -.->|weckt| C & RA & RB
         C -->|Inbox| RA & RB
         RA & RB -->|Inbox| C
     end
 ```
 
+## Wo läuft der Server?
+
+| Option | Kosten (3 Jahre, ca.) | Bemerkung |
+| --- | --- | --- |
+| **Hetzner Cloud CX23 / CAX11** (Standard) | 255–280 € | Einfache Konsole, stündliche Abrechnung, oft knapp verfügbar |
+| Raspberry Pi 5 (8 GB) zu Hause | 270–300 € inkl. Strom | Kein Hosting, dafür Pflege selbst; `host/setup-host.sh` läuft auch dort |
+| Azure B2als v2, reserviert | ca. 900 € | Übungsziel für Azure; Anbieter-Funktion in `infra/` noch zu ergänzen |
+
+Alles ab `host/` ist anbieterunabhängig. Nur `infra/` kennt den Anbieter.
+
 ## Schritte
 
-1. **VM per Pulumi**
-   - Linux-VM (z. B. Ubuntu LTS, B2s: 2 vCPU, 4 GB RAM), verwalteter Datenträger für den Workspace.
-   - Keine eingehenden Ports außer SSH, und SSH nur von der eigenen IP oder über Azure Bastion bzw. ein privates VPN.
-   - Auto-Shutdown aus (der Agent soll laufen), Budget-Alarm an.
-   - Cloud-Init: Git, tmux, Python, Node, Docker.
-2. **Claude Code installieren** nach der offiziellen Anleitung und einmal per SSH `claude` starten, mit `/login` über claude.ai anmelden. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
-3. **Workspaces für die Rollen anlegen** (Konzept: [`rollen.md`](rollen.md))
-   - Ein Workspace pro Rolle mit eigener `CLAUDE.md` und Ordner `inbox/`: der Concierge und die Rollen-Agenten, z. B. einer für Wissen und einer für Code-Projekte. Rollen-Agenten arbeiten in ihrem eigenen Repo.
-   - Dieses Repo klonen; GitHub-Zugang mit einem fein eingeschränkten Token nur für die eigenen Projekt-Repos.
-   - Persönliche Workspaces und Inboxen sind privat und gehören nicht in dieses Repo.
-4. **Sitzungen starten**
-   - Pro Rolle einmal von Hand im Workspace `claude --remote-control <rolle>` starten und die Rückfrage für Remote Control bestätigen.
-   - Dann pro Rolle eine systemd-Unit, die beim Hochfahren in einer tmux-Sitzung `claude --continue --remote-control <rolle>` startet und nach einem Absturz neu startet. So kommen nach einem Neustart der VM alle Sitzungen mit ihrem letzten Verlauf zurück.
-   - Einen Watcher einrichten, der eine Sitzung per `tmux send-keys` weckt, sobald in ihrer Inbox ein neuer Auftrag liegt.
-5. **Vom Handy verbinden**
-   - Im Alltag mit der Concierge-Sitzung sprechen; die Rollen-Sitzungen nur für längere Arbeit direkt öffnen.
+Die ausführliche Anleitung mit allen Secrets und Variablen steht in [`infra/README.md`](../infra/README.md).
+
+1. **Konten:** Hetzner Cloud (API-Token) und Pulumi Cloud (Token).
+2. **GitHub-Umgebung `infra`:** Secrets und Variablen eintragen: Token, erlaubte IPs, öffentlicher SSH-Schlüssel, Rollen. Nichts davon landet im Repo.
+3. **Server anlegen:** Workflow *Infrastruktur* mit `preview`, dann `up`. Cloud-Init installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste.
+4. **Anmelden:** Per SSH auf den Server, mit `tmux -L arborist-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
+5. **Rollen einrichten:** Die `CLAUDE.md` jeder Rolle liegt unter `~/roles/<rolle>/` und kommt aus einer Vorlage. Rollen mit eigenem Repo werden aus `ARBORIST_ROLE_REPOS` geklont.
+6. **Vom Handy verbinden:**
+   - In der Claude-App die Sitzung **concierge** öffnen; im Alltag nur mit ihr sprechen.
    - Sprechen über die Diktierfunktion von Handy bzw. App.
    - Benachrichtigungen erlauben: Der Agent meldet sich, wenn eine lange Aufgabe fertig ist oder er eine Entscheidung braucht.
-   - **Trusted Devices** in den Kontoeinstellungen einschalten, damit nur bestätigte Geräte die Sitzung steuern dürfen.
+   - **Trusted Devices** in den Kontoeinstellungen einschalten, damit nur bestätigte Geräte die Sitzungen steuern dürfen.
+
+## Auf dem Server
+
+| Befehl | Zweck |
+| --- | --- |
+| `arborist-status` | Rollen, offene und geparkte Aufträge, Quota-Pause |
+| `tmux -L arborist-<rolle> attach` | In eine Sitzung schauen (lösen: `Strg+b`, dann `d`) |
+| `arborist-inbox --to <rolle> "…"` | Auftrag in eine Inbox legen |
+| `sudo arborist-update` | Neuesten Stand dieses Repos holen und Host neu einrichten |
+| `journalctl -u arborist-watch -f` | Was der Watcher gerade tut |
 
 ## Was damit schon geht
 
-- Ideen und Aufgaben per Sprache vom Handy abladen; der Agent pflegt To-do- und Notizdateien im privaten Workspace.
-- Am Repo weiterbauen: Gateway, Queue, Web-Dashboard, Playdate-Server.
-- Mehrere Rollen parallel, die sich über Inboxen Aufträge zuschieben.
+- Ideen und Aufgaben per Sprache vom Handy an den Concierge geben; er verteilt sie an die Rollen.
+- Am Repo weiterbauen: als Nächstes der Web-Kartensimulator (Meilenstein 2).
+- Mehrere Rollen parallel; bei leerer Quota wird gewartet, nichts geht verloren.
 
 ## Bewusste Abkürzungen
 
 | Abkürzung | Später ersetzt durch |
 | --- | --- |
-| Claude-App statt eigener Geräte | Device-Gateway mit Playdate, Web-Dashboard, Brille, E-Ink |
-| Kein Broker, nur GitHub-Token mit engem Scope | Rechte- und Tool-Broker |
-| Dateien statt Queue | Eingangs-Queue |
-| Diktat des Handys statt Intake-Agent | Intake-Agent mit Whisper oder Voxtral |
+| Claude-App statt eigener Geräte | Web-Kartensimulator, dann Playdate, Brille, E-Ink über das Device-Gateway |
+| Kein Broker, nur Git-Zugänge mit engem Scope | Rechte- und Tool-Broker |
 | Inbox-Dateien und `tmux send-keys` | Eingangs-Queue und Gateway |
+| Diktat des Handys statt Intake-Agent | Transkription mit Whisper oder Voxtral |
 
-Die Zielarchitektur ([`arc42.md`](arc42.md)) bleibt unverändert. Remote Control ist der Zugang für den Bau und bleibt auch später als Notfall- und Admin-Zugang erhalten.
+Die Zielarchitektur ([`arc42.md`](arc42.md)) bleibt unverändert. Remote Control bleibt auch später als Admin- und Notfallzugang erhalten.
 
 ## Risiken
 
-- **Shell mit Zugangsdaten:** Bis der Broker steht, liegt das GitHub-Token auf der VM. Deshalb nur ein eng eingeschränktes Token und keine weiteren Zugänge.
+- **Shell mit Zugangsdaten:** Bis der Broker steht, liegen Git-Zugänge auf dem Server. Deshalb nur eng eingeschränkte Tokens bzw. Deploy-Keys pro Repo.
 - **Sitzungsinhalte bei Anthropic:** Während Remote Control verbunden ist, liegt das Transkript der Sitzung auf den Servern von Anthropic. Keine dienstlichen Daten.
-- **Abo-Limits:** Gilt wie im Dauerbetrieb, siehe [`vision.md`](vision.md).
+- **Öffentliches Repo:** Workflow-Logs sind öffentlich. Persönliche Werte sind deshalb Secrets und werden auch in Pulumi als geheim markiert.
+- **Abo-Limits:** Siehe [`vision.md`](vision.md) und [`rollen.md`](rollen.md), Abschnitt Quota.

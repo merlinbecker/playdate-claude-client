@@ -1,0 +1,20 @@
+# Weckt Rollen-Sitzungen bei neuen Aufträgen in ihrer Inbox und pausiert bei leerer Quota.
+# Eigene Einstellungen (NUDGE_INTERVAL, LIMIT_BACKOFF, ...) optional in /etc/arborist/watch.env
+
+[Unit]
+Description=Arborist Inbox-Watcher
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=~
+EnvironmentFile=/etc/arborist/arborist.env
+EnvironmentFile=-/etc/arborist/watch.env
+ExecStart=/usr/local/bin/arborist-watch
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

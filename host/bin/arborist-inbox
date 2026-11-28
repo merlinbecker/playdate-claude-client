@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Legt einen Auftrag in die Inbox einer Rolle (atomar: erst temporär, dann umbenennen).
+#
+#   arborist-inbox --to wissen [--from concierge] [--priority dringend] [--reply-to concierge] "Text"
+#   echo "Text" | arborist-inbox --to bauen -
+#
+# Gibt den Pfad der neuen Auftragsdatei aus.
+
+set -euo pipefail
+
+to="" from="${ARBORIST_ROLE:-$(basename "$PWD")}" priority="normal" reply_to=""
+usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+
+while (($#)); do
+  case $1 in
+    --to) to="$2"; shift 2 ;;
+    --from) from="$2"; shift 2 ;;
+    --priority) priority="$2"; shift 2 ;;
+    --reply-to) reply_to="$2"; shift 2 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    -*) [[ $1 == - ]] && break; echo "Unbekannte Option: $1" >&2; usage ;;
+    *) break ;;
+  esac
+done
+
+name_ok='^[a-z][a-z0-9-]{0,30}$'
+[[ $to =~ $name_ok ]] || { echo "--to fehlt oder ist ungültig" >&2; usage; }
+[[ $from =~ $name_ok ]] || { echo "--from ist ungültig: $from" >&2; exit 2; }
+[[ $priority == normal || $priority == dringend ]] || { echo "--priority: normal oder dringend" >&2; exit 2; }
+reply_to="${reply_to:-$from}"
+
+if [[ ${1:-} == - || $# -eq 0 ]]; then
+  body="$(cat)"
+else
+  body="$*"
+fi
+[[ -n ${body//[[:space:]]/} ]] || { echo "Leerer Auftrag" >&2; exit 2; }
+
+inbox="$HOME/roles/$to/inbox"
+[[ -d $inbox ]] || { echo "Inbox der Rolle '$to' fehlt: $inbox" >&2; exit 1; }
+
+stamp="$(date +%Y-%m-%d-%H%M%S)"
+id="$stamp-$from-$RANDOM"
+tmp="$inbox/.$id.tmp"
+{
+  printf -- '---\n'
+  printf 'id: %s\n' "$id"
+  printf 'from: %s\n' "$from"
+  printf 'to: %s\n' "$to"
+  printf 'created: %s\n' "$(date --iso-8601=seconds)"
+  printf 'priority: %s\n' "$priority"
+  printf 'reply_to: %s\n' "$reply_to"
+  printf -- '---\n\n%s\n' "$body"
+} > "$tmp"
+mv "$tmp" "$inbox/$id.md"
+echo "$inbox/$id.md"

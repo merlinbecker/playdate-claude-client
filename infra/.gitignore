@@ -1,0 +1,6 @@
+# Stack-Konfiguration enthält persönliche Werte (IP-Adressen, Schlüssel, Repo-URLs).
+# Sie wird im GitHub-Workflow aus Secrets und Variablen erzeugt und nie eingecheckt.
+Pulumi.*.yaml
+!Pulumi.yaml
+venv/
+__pycache__/

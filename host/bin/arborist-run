@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Startet die Claude-Code-Sitzung einer Rolle mit Remote Control.
+# Wird von arborist-role@<rolle>.service in einer eigenen tmux-Sitzung aufgerufen.
+#
+# Gibt es für das Arbeitsverzeichnis schon einen Verlauf, wird er mit
+# --continue fortgesetzt. So kommt eine Rolle nach einem Neustart der VM mit
+# ihrem letzten Gespräch zurück. Ihr eigentlicher Stand liegt ohnehin in Dateien.
+
+set -euo pipefail
+
+role="${1:?Aufruf: arborist-run <rolle>}"
+[[ $role =~ ^[a-z][a-z0-9-]{0,30}$ ]] || { echo "Ungültiger Rollenname: $role" >&2; exit 2; }
+
+dir="$HOME/roles/$role"
+claude="$HOME/.local/bin/claude"
+[[ -d $dir ]] || { echo "Arbeitsverzeichnis fehlt: $dir" >&2; exit 1; }
+[[ -x $claude ]] || { echo "Claude Code fehlt: $claude" >&2; exit 1; }
+
+cd "$dir"
+
+# Claude Code legt Verläufe unter ~/.claude/projects/<Pfad mit - statt / und .> ab.
+# Weicht die Kodierung ab, startet einfach eine neue Sitzung; das ist unkritisch.
+history_dir="$HOME/.claude/projects/$(printf '%s' "$dir" | sed 's#[^A-Za-z0-9]#-#g')"
+
+if compgen -G "$history_dir/*.jsonl" >/dev/null; then
+  exec "$claude" --continue --remote-control "$role"
+else
+  exec "$claude" --remote-control "$role"
+fi

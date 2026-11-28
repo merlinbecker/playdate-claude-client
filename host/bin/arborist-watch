@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Inbox-Watcher: weckt eine Rollen-Sitzung, wenn in ihrer Inbox ein Auftrag liegt.
+#
+# - Reagiert auf neue Dateien (inotify) und schickt der Sitzung per tmux eine
+#   kurze Nachricht.
+# - Liegen Aufträge länger herum, weckt er höchstens alle NUDGE_INTERVAL Sekunden
+#   erneut (z. B. nach einem Quota-Reset).
+# - Erkennt nach dem Wecken eine Limit-Meldung von Claude Code und pausiert dann
+#   für alle Rollen LIMIT_BACKOFF Sekunden, weil sich alle Rollen die Quota teilen.
+#
+# Einstellungen per Umgebung (oder /etc/arborist/watch.env über die systemd-Unit).
+
+set -uo pipefail
+
+ROLES="${ARBORIST_ROLES:?ARBORIST_ROLES fehlt}"
+DEBOUNCE="${NUDGE_DEBOUNCE:-20}"          # Sekunden sammeln, bevor geweckt wird
+INTERVAL="${NUDGE_INTERVAL:-1800}"        # erneut wecken, wenn Aufträge liegen bleiben
+MIN_GAP="${NUDGE_MIN_GAP:-120}"           # nie öfter als alle MIN_GAP Sekunden pro Rolle
+TICK="${WATCH_TICK:-300}"                 # Takt für die Prüfung liegengebliebener Aufträge
+LIMIT_PATTERN="${LIMIT_PATTERN:-usage limit|limit reached|rate limit}"
+LIMIT_BACKOFF="${LIMIT_BACKOFF:-3600}"
+CHECK_DELAY="${LIMIT_CHECK_DELAY:-45}"    # so lange nach dem Wecken auf Limit-Meldung prüfen
+MESSAGE="${NUDGE_MESSAGE:-Neue oder offene Aufträge in deiner Inbox (inbox/). Bitte nach Priorität abarbeiten und Rückmeldungen per arborist-inbox schicken.}"
+
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/arborist"
+PAUSE_FILE="$STATE/paused-until"
+mkdir -p "$STATE"
+
+log() { printf '%s %s\n' "$(date --iso-8601=seconds)" "$*"; }
+now() { date +%s; }
+
+declare -A last_nudge=()
+
+inbox_of() { printf '%s/roles/%s/inbox' "$HOME" "$1"; }
+
+pending() {
+  compgen -G "$(inbox_of "$1")/*.md" >/dev/null
+}
+
+paused() {
+  [[ -f $PAUSE_FILE ]] || return 1
+  local until; until="$(cat "$PAUSE_FILE" 2>/dev/null || echo 0)"
+  [[ $until =~ ^[0-9]+$ ]] || return 1
+  (( $(now) < until ))
+}
+
+check_limit() {
+  local role="$1"
+  sleep "$CHECK_DELAY"
+  if tmux -L "arborist-$role" capture-pane -p -t "$role" -S -15 2>/dev/null | grep -Eiq "$LIMIT_PATTERN"; then
+    echo $(( $(now) + LIMIT_BACKOFF )) > "$PAUSE_FILE"
+    log "Limit-Meldung bei $role erkannt: Pause für alle Rollen bis $(date -d "@$(cat "$PAUSE_FILE")" '+%F %T')"
+  fi
+}
+
+nudge() {
+  local role="$1" t; t="$(now)"
+  if paused; then
+    log "$role: Pause wegen Quota, nicht geweckt"
+    return
+  fi
+  if (( t - ${last_nudge[$role]:-0} < MIN_GAP )); then
+    return
+  fi
+  if ! tmux -L "arborist-$role" has-session -t "$role" 2>/dev/null; then
+    log "$role: keine laufende Sitzung"
+    return
+  fi
+  tmux -L "arborist-$role" send-keys -t "$role" -l "$MESSAGE"
+  tmux -L "arborist-$role" send-keys -t "$role" Enter
+  last_nudge[$role]="$t"
+  log "$role: geweckt"
+  check_limit "$role" &
+}
+
+dirs=()
+for role in $ROLES; do
+  inbox="$(inbox_of "$role")"
+  if [[ -d $inbox ]]; then dirs+=("$inbox"); else log "Inbox fehlt, übersprungen: $inbox"; fi
+done
+((${#dirs[@]})) || { log "Keine Inboxen gefunden"; exit 1; }
+
+log "Beobachte: ${dirs[*]}"
+for role in $ROLES; do pending "$role" && nudge "$role"; done
+
+while true; do
+  event_dir="$(inotifywait -q -t "$TICK" -e close_write,moved_to --format '%w' "${dirs[@]}")"
+  rc=$?
+  if (( rc == 0 )); then
+    role="$(basename "$(dirname "$event_dir")")"
+    sleep "$DEBOUNCE"
+    pending "$role" && nudge "$role"
+  elif (( rc == 2 )); then
+    for role in $ROLES; do
+      if pending "$role" && (( $(now) - ${last_nudge[$role]:-0} >= INTERVAL )); then
+        nudge "$role"
+      fi
+    done
+  else
+    log "inotifywait beendet mit Code $rc, neuer Versuch in 10 s"
+    sleep 10
+  fi
+done

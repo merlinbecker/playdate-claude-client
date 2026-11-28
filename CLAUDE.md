@@ -18,6 +18,11 @@ Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisc
 ## Devlog
 An jedem Arbeitstag einen Eintrag in `docs/devlog/JJJJ-MM-TT.md` anlegen oder ergänzen und in `docs/devlog/README.md` verlinken. Kurz und für interessierte Laien geschrieben: was besprochen, entschieden, gelernt wurde und was als Nächstes kommt. Regeln und Front Matter stehen in `docs/devlog/README.md`.
 
+## Infrastruktur und Host
+- `infra/`: Pulumi (Python), Standard Hetzner. Tests: `cd infra && python -m pytest -q`. Persönliche Werte nur über GitHub-Secrets/-Variablen; sensible Werte in Pulumi als Secret markieren, weil Workflow-Logs öffentlich sind.
+- `host/`: anbieterunabhängige Einrichtung (Bash, idempotent). Vor jedem Commit `shellcheck host/setup-host.sh host/bin/*`.
+- Den Server nie über Pulumi neu bauen lassen; Host-Änderungen laufen über `sudo arborist-update`.
+
 ## Server
 - Python 3.11+, FastAPI, SQLite. Start: `uvicorn main:app` in `server/`.
 - `PDC_AGENT=echo` für Tests ohne Claude, `PDC_AGENT=claude` für den echten Agenten.

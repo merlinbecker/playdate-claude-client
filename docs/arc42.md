@@ -39,7 +39,7 @@ Nicht vorgesehen: dienstliche Daten, Mehrbenutzerbetrieb, Sprachausgabe.
 ## 2. Randbedingungen
 
 - **Agent:** Claude Code CLI, angemeldet mit dem Claude-Abo des Nutzers über den offiziellen Login. Gearbeitet wird innerhalb der Abo-Quota (Fünf-Stunden-Fenster, Wochenlimit).
-- **Betrieb:** Azure-VM mit Docker, provisioniert mit Pulumi. Lokaler Betrieb für Entwicklung und POC.
+- **Betrieb:** Kleiner Linux-Server, Standard Hetzner Cloud, provisioniert mit Pulumi über einen GitHub-Workflow. Persönliche Werte nur als GitHub-Secrets und -Variablen, weil das Repo öffentlich ist. Der Host-Teil läuft auf jedem Ubuntu-Server, auch auf einem Raspberry Pi.
 - **Playdate:** 400×240 Pixel, 1 Bit, WLAN 2,4 GHz, Mikrofon, Lua- und C-API (SDK 2.x). Netzwerk nur bei geöffneter App, kein Push.
 - **Even Realities G1:** Monochromes Display in der Brille, Anbindung über das Handy. Apps laufen über MentraOS als Miniapp in der Mentra-App auf dem Handy.
 - **Generisch:** Keine persönlichen Daten, Prompts, Hostnamen oder Tokens im Repo. Konfiguration über Umgebungsvariablen und einen privaten Agent-Workspace.
@@ -108,7 +108,7 @@ C4Container
         Container(eink, "E-Ink-Display", "generisch", "Passives Mini-Dashboard")
     }
 
-    System_Boundary(vm, "Arborist-Instanz, Azure-VM") {
+    System_Boundary(vm, "Arborist-Instanz, eigener Server") {
         Container(gw, "Device-Gateway", "Python, FastAPI", "Registry, Ingest, Push, Ausgabe-Adapter")
         ContainerDb(q, "Eingangs-Queue", "SQLite", "Einträge mit Zustand und Verlauf")
         Container(intake, "Intake-Agent", "Python", "Transkription und Aufbereitung")
@@ -308,6 +308,30 @@ sequenceDiagram
     A->>A: Zusammenfassen, Gedächtnis pflegen, nächsten Tag planen
 ```
 
+### Szenario F: To-do per Sprache, Karte für den Tag
+
+Der Nutzer spricht „Ich muss noch die Spülmaschine ausräumen“. Der Concierge erkennt das Thema To-dos, trägt den Punkt ein und zeigt die Tageskarte mit allen offenen To-dos zum Abhaken. Auf Nachfrage gibt es stattdessen die Tagesübersicht mit Datum, Terminen und To-dos.
+
+```mermaid
+sequenceDiagram
+    actor N as Nutzer
+    participant W as Web-Kartensimulator (400×240)
+    participant G as Server
+    participant C as Concierge
+    N->>W: Taste halten, sprechen
+    W->>G: Audio hochladen
+    G->>C: Transkript „Spülmaschine ausräumen“
+    C->>C: Thema erkennen: To-dos
+    C->>C: To-do in die Tagesliste eintragen
+    C->>G: Karte „Heute: To-dos“ mit Häkchen-Liste
+    G-->>W: Karte
+    N->>W: Punkt abhaken
+    W->>G: Interaktion
+    G->>C: „erledigt: Spülmaschine“
+    C->>G: aktualisierte Karte
+    G-->>W: Karte
+```
+
 ### Szenario E: Tool-Aufruf mit Bestätigung
 
 ```mermaid
@@ -332,9 +356,9 @@ sequenceDiagram
 
 | Variante | Läuft auf | Erreichbarkeit | Zweck |
 | --- | --- | --- | --- |
-| Bootstrap | Azure-VM, nur Claude Code mit Remote Control | Nur ausgehend; SSH für Admin | Agent sofort nutzbar, baut den Rest |
+| Bootstrap | Hetzner-Server (CX23/CAX11), Claude-Code-Rollen mit Remote Control | Nur ausgehend; SSH für Admin | Agent sofort nutzbar, baut den Rest |
 | POC | Lokaler Rechner oder die VM | LAN bzw. HTTPS mit Token | Playdate-Ablauf und Latenz testen |
-| V2 | Azure-VM (z. B. B2s, 2 vCPU, 4 GB RAM), Docker, Pulumi | HTTPS über Reverse Proxy, nur Port 443 | Dauerbetrieb |
+| V2 | Derselbe Server mit Gateway, Queue und Broker in Docker | HTTPS über Reverse Proxy oder Tunnel | Dauerbetrieb |
 
 ```mermaid
 flowchart TB
@@ -345,7 +369,7 @@ flowchart TB
         EI[E-Ink-Display]
     end
 
-    subgraph Azure[Azure, per Pulumi provisioniert]
+    subgraph Azure[Hetzner Cloud, per Pulumi provisioniert]
         subgraph VM[Linux-VM, z. B. B2s]
             RP[Reverse Proxy<br/>HTTPS, Port 443]
             subgraph Docker[Docker, je Instanz ein Satz]
@@ -357,7 +381,7 @@ flowchart TB
             end
             SCH[Scheduler]
         end
-        KV[Key Vault<br/>Broker-Secrets]
+        KV[Secret-Speicher<br/>Broker-Secrets]
     end
 
     ANT[Anthropic]
@@ -439,7 +463,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 5 | Zuerst Bootstrap in der Cloud mit Remote Control (ersetzt „erst lokaler POC“) | Der laufende Agent baut den Rest selbst; Remote Control braucht keine eingehenden Ports |
 | 6 | Downsampling in Lua im POC | Schnell umsetzbar; C nur, wenn zu langsam |
 | 7 | Transkription als austauschbarer Provider | Voxtral ist günstig und gut; lokal bleibt Standard |
-| 8 | Azure-VM mit Docker, IaC mit Pulumi | Dauerhafte Shell für Claude Code; reproduzierbar |
+| 8 | Eigener Linux-Server, Standard Hetzner Cloud, IaC mit Pulumi (ersetzt „Azure-VM“) | Rund ein Viertel der Azure-Kosten; einfache Bedienung; Anbieter in `infra/` austauschbar |
 | 9 | Externe Tools nur über einen Rechte- und Tool-Broker | Tokens außerhalb des Agenten; granulare Rechte und Protokoll |
 | 10 | Eingangs-Queue vor dem Agenten, asynchrone Batches | Ablegen geht immer; Quota wird geschont |
 | 11 | Generische Ansicht plus Geräte-Adapter | Sehr unterschiedliche Geräte ohne Logik im Client |
@@ -448,6 +472,9 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 14 | Rollen als getrennte Sitzungen mit Inbox statt Rollenwechsel in einer Sitzung | Saubere Trennung von Kontext, Skills und Regeln; Rollen bleiben einzeln ansprechbar |
 | 15 | Concierge als einziger Gesprächspartner | Eine Stelle für Sprache, Ordnen und Verteilen; entspricht dem Intake-Agenten |
 | 16 | Wiederanlauf über systemd, Sitzungen mit `--continue` | Alle Rollen kommen nach einem Neustart zurück; Herdr nur als optionale Admin-Ansicht |
+| 17 | Persönliche Werte nur in GitHub-Secrets und -Variablen, in Pulumi als Secrets markiert | Repo und Workflow-Logs sind öffentlich |
+| 18 | Server wird nach dem Anlegen nicht neu gebaut; Updates per `arborist-update` | Anmeldungen, Sitzungen und Inboxen bleiben erhalten |
+| 19 | Web-Kartensimulator vor dem Playdate | Karten und Ablauf schneller iterieren; Server und Karten-DSL werden für den Playdate weiterverwendet |
 
 ## 10. Qualitätsszenarien
 
@@ -473,23 +500,28 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 
 ## 12. Meilensteine
 
-1. **Bootstrap in der Cloud** ([`bootstrap.md`](bootstrap.md))
-   - [ ] Azure-VM per Pulumi, nur SSH eingehend
-   - [ ] Claude Code installiert und mit dem Abo angemeldet
-   - [ ] Privater Workspace mit eigener `CLAUDE.md`, Repo geklont
-   - [ ] `claude remote-control` läuft dauerhaft (tmux, dann systemd)
+1. **Bootstrap in der Cloud** ([`bootstrap.md`](bootstrap.md), [`infra/README.md`](../infra/README.md))
+   - [ ] Hetzner-Server per Pulumi über den GitHub-Workflow, nur SSH eingehend
+   - [ ] Claude Code installiert und in jeder Rolle mit dem Abo angemeldet
+   - [ ] Concierge und Rollen laufen als systemd-Dienste mit Remote Control, Watcher aktiv
    - [ ] Bedienung vom Handy inklusive Diktat; Trusted Devices an
    - [ ] Erste echte Aufgabe: Der Agent baut am eigenen Repo weiter
-2. **POC Playdate** (Server läuft schon auf der VM)
-   - [ ] Server lokal: Chunk-Ingest, Whisper, Queue, Echo- und Claude-Agent
+2. **Web-Kartensimulator** (wird mit dem laufenden Agenten gebaut)
+   - [ ] Webseite mit einem Display in Playdate-Größe: 400×240 Pixel, 1 Bit
+   - [ ] Sprachaufnahme im Browser, Upload an den Server, Transkription
+   - [ ] Concierge erkennt das Thema und erzeugt passende Karten nach der [Karten-DSL](karten-dsl.md)
+   - [ ] Interaktion wie auf dem Playdate: Auswahl, Abhaken, Blättern
+   - [ ] Schritt für Schritt iterieren, bis Karten und Ablauf überzeugen (siehe Szenario F)
+3. **POC Playdate** (Server und Karten aus Meilenstein 2 werden weiterverwendet)
+   - [ ] Chunk-Ingest und Transkription auf dem Server
    - [ ] `tools/fake_playdate.py` für Tests ohne Hardware
    - [ ] Playdate: Aufnahme mit A, Downsampling, Outbox mit Chunks und Retry
    - [ ] Inbox-Polling und Renderer für `text`, `list`, `icon`, `bar`, `choices`
    - [ ] Messung: Zeit vom Loslassen bis zur ersten Karte
-3. **Web-Dashboard:** Lagebild und Terminal, Nachtwartung über den Scheduler.
-4. **Queue, Gateway und Lagebild:** Asynchroner Eingang, Registry, generische Ansicht, Lagebild-Subagent.
-5. **Broker:** To-dos, Kalender, Mail und GitHub nur über den Broker, Bestätigungen per Ansicht.
-6. **Weitere Geräte:** E-Ink-Mini-Dashboard, Even Realities G1 über MentraOS.
+4. **Web-Dashboard:** Lagebild und Terminal, Nachtwartung über den Scheduler.
+5. **Queue, Gateway und Lagebild:** Asynchroner Eingang, Registry, generische Ansicht, Lagebild-Subagent.
+6. **Broker:** To-dos, Kalender, Mail und GitHub nur über den Broker, Bestätigungen per Ansicht.
+7. **Weitere Geräte:** E-Ink-Mini-Dashboard, Even Realities G1 über MentraOS.
 
 ## 13. Offene Fragen
 

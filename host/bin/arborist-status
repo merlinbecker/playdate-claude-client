@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Kurzer Überblick: Sitzungen, offene Aufträge, Quota-Pause.
+
+set -uo pipefail
+
+env_file=/etc/arborist/arborist.env
+# shellcheck source=/dev/null
+[[ -r $env_file ]] && source "$env_file"
+roles="${ARBORIST_ROLES:?ARBORIST_ROLES fehlt}"
+user="${ARBORIST_USER:-$USER}"
+home="$(getent passwd "$user" | cut -d: -f6)"
+pause_file="$home/.local/state/arborist/paused-until"
+
+printf '%-14s %-10s %8s %8s\n' ROLLE DIENST OFFEN GEPARKT
+for role in $roles; do
+  inbox="$home/roles/$role/inbox"
+  state="$(systemctl is-active "arborist-role@$role.service" 2>/dev/null)"
+  open="$(find "$inbox" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l)"
+  parked="$(find "$inbox/parked" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l)"
+  printf '%-14s %-10s %8s %8s\n' "$role" "$state" "$open" "$parked"
+done
+printf '\nWatcher: %s\n' "$(systemctl is-active arborist-watch.service 2>/dev/null)"
+
+if [[ -f $pause_file ]]; then
+  until="$(cat "$pause_file")"
+  if [[ $until =~ ^[0-9]+$ ]] && (( $(date +%s) < until )); then
+    printf 'Quota-Pause bis %s\n' "$(date -d "@$until" '+%F %T')"
+  fi
+fi
+printf '\nAn eine Sitzung hängen:  tmux -L arborist-<rolle> attach   (lösen: Strg+b, dann d)\n'
