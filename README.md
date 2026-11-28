@@ -1,15 +1,13 @@
-# Arborist
+# Pocket Concierge
 
 **Ein persönlicher Always-on-Agent, mit dem man von überall reden kann – auch von sehr einfachen Geräten aus.**
 
-Arborist ist Claude Code, das rund um die Uhr auf einer eigenen VM läuft und Ordnung in den Alltag bringt: Ideen abladen, To-dos nachführen, an Termine und Notizen erinnern, Mails und Kalender pflegen, zusammenfassen, was gerade läuft, und kleine private Code-Projekte auf GitHub voranbringen.
+Pocket Concierge ist Claude Code, das rund um die Uhr auf einem eigenen Server läuft und Ordnung in den Alltag bringt: Ideen abladen, To-dos nachführen, an Termine und Notizen erinnern, Mails und Kalender pflegen, zusammenfassen, was gerade läuft, und kleine private Code-Projekte auf GitHub voranbringen.
 
 Bedient wird er auf zwei Arten:
 
 - **Web-Dashboard:** Kann alles. Lagebild, Projekte, Verlauf, Terminal.
 - **Eingeschränkte Geräte:** Playdate, Smart Glasses wie die Even Realities G1, ein kleines E-Ink-Display. Man spricht hinein oder wählt aus vorbereiteten nächsten Schritten – ganz ohne Tastatur.
-
-> Das Repo heißt noch `playdate-claude-client`, weil der Playdate der erste Client ist. Gebaut wird aber das ganze System.
 
 ## So funktioniert es
 
@@ -22,11 +20,11 @@ flowchart LR
         EI[E-Ink-Display<br/>Mini-Dashboard]
     end
 
-    subgraph Arborist[Arborist-Instanz auf eigener VM]
+    subgraph Instanz[Instanz auf eigenem Server]
         GW[Device-Gateway<br/>Registry · Ingest · Push]
         Q[(Eingangs-Queue<br/>alles wird sofort abgelegt)]
         IN[Intake-Agent<br/>Transkription + Aufbereitung]
-        AR[Arborist<br/>Claude Code, 24/7<br/>Main-Agent + Subagenten]
+        AR[Concierge + Rollen<br/>Claude Code, 24/7]
         LB[Lagebild<br/>Cheat Sheets · nächste Schritte<br/>Tagesthemen]
         BR[Rechte- und Tool-Broker<br/>hält alle Tokens]
     end
@@ -40,7 +38,7 @@ flowchart LR
 ```
 
 1. **Ablegen geht immer.** Jede Eingabe landet zuerst in einer Queue und wird sofort quittiert – auch wenn der Agent gerade beschäftigt ist oder die Quota leer ist.
-2. **Abarbeiten asynchron.** Der Arborist holt sich Einträge in Batches, ordnet sie Projekten zu und verteilt sie an Subagenten (To-dos, Kalender und Mail, Notizen, Code).
+2. **Abarbeiten asynchron.** Der Concierge holt sich Einträge in Batches, ordnet sie Projekten zu und verteilt sie an Subagenten (To-dos, Kalender und Mail, Notizen, Code).
 3. **Antworten passen aufs Gerät.** Der Agent beschreibt Ergebnisse geräteunabhängig. Adapter machen daraus eine HTML-Seite, eine 1-Bit-Karte für den Playdate, ein paar Zeilen für die Brille oder ein Bild für das E-Ink-Display.
 4. **Bedienbar ohne Sprache.** Ein Lagebild-Subagent liefert zu allem eine Kurzfassung und auswählbare nächste Schritte.
 5. **Werkzeuge nur über den Broker.** Der Agent hat keine eigenen Zugänge. Ein Rechte- und Tool-Broker hält die Tokens, gibt dem Agenten genau einen MCP-Server und entscheidet pro Tool: erlaubt, verboten oder nur nach Bestätigung.
