@@ -8,11 +8,11 @@
 # - Erkennt nach dem Wecken eine Limit-Meldung von Claude Code und pausiert dann
 #   für alle Rollen LIMIT_BACKOFF Sekunden, weil sich alle Rollen die Quota teilen.
 #
-# Einstellungen per Umgebung (oder /etc/arborist/watch.env über die systemd-Unit).
+# Einstellungen per Umgebung (oder /etc/pocket-concierge/watch.env über die systemd-Unit).
 
 set -uo pipefail
 
-ROLES="${ARBORIST_ROLES:?ARBORIST_ROLES fehlt}"
+ROLES="${POCKET_CONCIERGE_ROLES:?POCKET_CONCIERGE_ROLES fehlt}"
 DEBOUNCE="${NUDGE_DEBOUNCE:-20}"          # Sekunden sammeln, bevor geweckt wird
 INTERVAL="${NUDGE_INTERVAL:-1800}"        # erneut wecken, wenn Aufträge liegen bleiben
 MIN_GAP="${NUDGE_MIN_GAP:-120}"           # nie öfter als alle MIN_GAP Sekunden pro Rolle
@@ -20,9 +20,9 @@ TICK="${WATCH_TICK:-300}"                 # Takt für die Prüfung liegengeblieb
 LIMIT_PATTERN="${LIMIT_PATTERN:-usage limit|limit reached|rate limit}"
 LIMIT_BACKOFF="${LIMIT_BACKOFF:-3600}"
 CHECK_DELAY="${LIMIT_CHECK_DELAY:-45}"    # so lange nach dem Wecken auf Limit-Meldung prüfen
-MESSAGE="${NUDGE_MESSAGE:-Neue oder offene Aufträge in deiner Inbox (inbox/). Bitte nach Priorität abarbeiten und Rückmeldungen per arborist-inbox schicken.}"
+MESSAGE="${NUDGE_MESSAGE:-Neue oder offene Aufträge in deiner Inbox (inbox/). Bitte nach Priorität abarbeiten und Rückmeldungen per pocket-inbox schicken.}"
 
-STATE="${XDG_STATE_HOME:-$HOME/.local/state}/arborist"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/pocket-concierge"
 PAUSE_FILE="$STATE/paused-until"
 mkdir -p "$STATE"
 
@@ -47,7 +47,7 @@ paused() {
 check_limit() {
   local role="$1"
   sleep "$CHECK_DELAY"
-  if tmux -L "arborist-$role" capture-pane -p -t "$role" -S -15 2>/dev/null | grep -Eiq "$LIMIT_PATTERN"; then
+  if tmux -L "pocket-$role" capture-pane -p -t "$role" -S -15 2>/dev/null | grep -Eiq "$LIMIT_PATTERN"; then
     echo $(( $(now) + LIMIT_BACKOFF )) > "$PAUSE_FILE"
     log "Limit-Meldung bei $role erkannt: Pause für alle Rollen bis $(date -d "@$(cat "$PAUSE_FILE")" '+%F %T')"
   fi
@@ -62,12 +62,12 @@ nudge() {
   if (( t - ${last_nudge[$role]:-0} < MIN_GAP )); then
     return
   fi
-  if ! tmux -L "arborist-$role" has-session -t "$role" 2>/dev/null; then
+  if ! tmux -L "pocket-$role" has-session -t "$role" 2>/dev/null; then
     log "$role: keine laufende Sitzung"
     return
   fi
-  tmux -L "arborist-$role" send-keys -t "$role" -l "$MESSAGE"
-  tmux -L "arborist-$role" send-keys -t "$role" Enter
+  tmux -L "pocket-$role" send-keys -t "$role" -l "$MESSAGE"
+  tmux -L "pocket-$role" send-keys -t "$role" Enter
   last_nudge[$role]="$t"
   log "$role: geweckt"
   check_limit "$role" &

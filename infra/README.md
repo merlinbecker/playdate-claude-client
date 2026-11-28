@@ -1,6 +1,6 @@
 # Infrastruktur
 
-Richtet den Server für eine Arborist-Instanz ein. Standard ist ein kleiner Server bei **Hetzner Cloud**. Gesteuert wird alles über einen GitHub-Workflow; deine persönlichen Werte liegen als Secrets und Variablen in GitHub, nicht im Repo. So kann das Repo öffentlich bleiben.
+Richtet den Server für eine Pocket-Concierge-Instanz ein. Standard ist ein kleiner Server bei **Hetzner Cloud**. Gesteuert wird alles über einen GitHub-Workflow; deine persönlichen Werte liegen als Secrets und Variablen in GitHub, nicht im Repo. So kann das Repo öffentlich bleiben.
 
 ## Was entsteht
 
@@ -10,9 +10,9 @@ Richtet den Server für eine Arborist-Instanz ein. Standard ist ein kleiner Serv
 | Firewall | Eingehend nur SSH von deinen IP-Adressen; ausgehend alles (Remote Control braucht nur ausgehende Verbindungen) |
 | Server | Ubuntu 24.04, Standard `cx23` (2 vCPU, 4 GB) in Nürnberg, mit Backups |
 
-Beim ersten Start richtet Cloud-Init den Benutzer ein, klont dieses Repo nach `/opt/arborist` und ruft [`host/setup-host.sh`](../host/setup-host.sh) auf. Das installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste (siehe [`docs/rollen.md`](../docs/rollen.md)).
+Beim ersten Start richtet Cloud-Init den Benutzer ein, klont dieses Repo nach `/opt/pocket-concierge` und ruft [`host/setup-host.sh`](../host/setup-host.sh) auf. Das installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste (siehe [`docs/rollen.md`](../docs/rollen.md)).
 
-Der Server wird bei späteren Läufen **nicht neu gebaut**, auch wenn sich Cloud-Init ändert. Sitzungen, Anmeldungen und Inboxen bleiben so erhalten. Änderungen am Host holst du auf dem Server mit `sudo arborist-update`.
+Der Server wird bei späteren Läufen **nicht neu gebaut**, auch wenn sich Cloud-Init ändert. Sitzungen, Anmeldungen und Inboxen bleiben so erhalten. Änderungen am Host holst du auf dem Server mit `sudo pocket-update`.
 
 ## Einrichten
 
@@ -31,21 +31,21 @@ Im Repo unter *Settings → Environments* die Umgebung **`infra`** anlegen. Opti
 | --- | --- | --- |
 | `HCLOUD_TOKEN` | Hetzner-API-Token | ja |
 | `PULUMI_ACCESS_TOKEN` | Pulumi-Cloud-Token | ja, außer bei eigenem Backend |
-| `ARBORIST_SSH_ALLOWED_CIDRS` | IP-Adressen, die SSH dürfen, z. B. `203.0.113.7/32`, mehrere mit Komma | ja |
-| `ARBORIST_ROLE_REPOS` | Zeilen `rolle=git-url` für Rollen mit eigenem Repo | nein |
+| `POCKET_CONCIERGE_SSH_ALLOWED_CIDRS` | IP-Adressen, die SSH dürfen, z. B. `203.0.113.7/32`, mehrere mit Komma | ja |
+| `POCKET_CONCIERGE_ROLE_REPOS` | Zeilen `rolle=git-url` für Rollen mit eigenem Repo | nein |
 | `PULUMI_CONFIG_PASSPHRASE` | Nur bei eigenem Backend | nein |
 
 **Variablen:**
 
 | Name | Inhalt | Standard |
 | --- | --- | --- |
-| `ARBORIST_SSH_PUBLIC_KEY` | Öffentlicher SSH-Schlüssel (`ssh-ed25519 …`) | Pflicht |
-| `ARBORIST_ROLES` | Rollen, mit Komma getrennt; `concierge` muss dabei sein | `concierge` |
-| `ARBORIST_LOCATION` | `nbg1`, `fsn1` oder `hel1` | `nbg1` |
-| `ARBORIST_SERVER_TYPE` | z. B. `cx23`, `cax11` (ARM), `cpx22` | `cx23` |
-| `ARBORIST_BACKUPS` | `true` oder `false` | `true` |
-| `ARBORIST_SWAP_GB` | Swap-Größe | `2` |
-| `ARBORIST_REPO_REF` | Branch, den der Server auscheckt | `main` |
+| `POCKET_CONCIERGE_SSH_PUBLIC_KEY` | Öffentlicher SSH-Schlüssel (`ssh-ed25519 …`) | Pflicht |
+| `POCKET_CONCIERGE_ROLES` | Rollen, mit Komma getrennt; `concierge` muss dabei sein | `concierge` |
+| `POCKET_CONCIERGE_LOCATION` | `nbg1`, `fsn1` oder `hel1` | `nbg1` |
+| `POCKET_CONCIERGE_SERVER_TYPE` | z. B. `cx23`, `cax11` (ARM), `cpx22` | `cx23` |
+| `POCKET_CONCIERGE_BACKUPS` | `true` oder `false` | `true` |
+| `POCKET_CONCIERGE_SWAP_GB` | Swap-Größe | `2` |
+| `POCKET_CONCIERGE_REPO_REF` | Branch, den der Server auscheckt | `main` |
 | `PULUMI_BACKEND_URL` | Eigenes Backend statt Pulumi Cloud | leer |
 
 ### 3. Workflow starten
@@ -61,22 +61,22 @@ Der Workflow läuft nur, wenn du ihn als Besitzer des Repos startest. Forks beko
 ### 4. Auf dem Server
 
 ```bash
-ssh arborist@<IP>
+ssh pocket@<IP>
 cloud-init status --wait          # warten, bis die Einrichtung fertig ist
-arborist-status                   # Rollen, offene Aufträge, Quota-Pause
-tmux -L arborist-concierge attach # in der Sitzung /login ausführen, Remote Control bestätigen
+pocket-status                   # Rollen, offene Aufträge, Quota-Pause
+tmux -L pocket-concierge attach # in der Sitzung /login ausführen, Remote Control bestätigen
 ```
 
 Lösen vom tmux-Fenster: `Strg+b`, dann `d`. Das gleiche für jede weitere Rolle. Danach erscheinen die Sitzungen in der Claude-App.
 
 ### Rollen mit eigenem Repo
 
-Steht eine Rolle in `ARBORIST_ROLE_REPOS`, wird ihr Repo nach `~/roles/<rolle>` geklont. Für private Repos braucht der Server einen Deploy-Key:
+Steht eine Rolle in `POCKET_CONCIERGE_ROLE_REPOS`, wird ihr Repo nach `~/roles/<rolle>` geklont. Für private Repos braucht der Server einen Deploy-Key:
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""   # auf dem Server, als arborist
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""   # auf dem Server, als pocket
 cat ~/.ssh/id_ed25519.pub                          # bei GitHub als Deploy-Key des Repos eintragen
-rm -rf ~/roles/<rolle> && sudo arborist-update     # erneut klonen
+rm -rf ~/roles/<rolle> && sudo pocket-update     # erneut klonen
 ```
 
 ## Lokal testen
@@ -95,4 +95,4 @@ Statt Pulumi Cloud geht jedes S3-kompatible Backend, etwa Hetzner Object Storage
 
 ## Weitere Anbieter
 
-`infra/__main__.py` wählt den Anbieter über `arborist:provider`. Umgesetzt ist `hetzner`. Ein weiterer Anbieter ist eine weitere Funktion, die SSH-Key, Firewall und Server mit derselben Cloud-Init-Konfiguration anlegt. Alles ab `host/` ist anbieterunabhängig und läuft auf jedem Ubuntu-Server, auch auf einem Raspberry Pi: Cloud-Init-Schritte von Hand ausführen und dann `host/setup-host.sh` starten.
+`infra/__main__.py` wählt den Anbieter über `pocket-concierge:provider`. Umgesetzt ist `hetzner`. Ein weiterer Anbieter ist eine weitere Funktion, die SSH-Key, Firewall und Server mit derselben Cloud-Init-Konfiguration anlegt. Alles ab `host/` ist anbieterunabhängig und läuft auf jedem Ubuntu-Server, auch auf einem Raspberry Pi: Cloud-Init-Schritte von Hand ausführen und dann `host/setup-host.sh` starten.

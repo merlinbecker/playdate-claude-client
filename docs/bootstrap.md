@@ -1,4 +1,4 @@
-# Meilenstein 1: Bootstrap – Arborist läuft in der Cloud
+# Meilenstein 1: Bootstrap – Pocket Concierge läuft in der Cloud
 
 Ziel: So schnell wie möglich ein Claude Code, das dauerhaft auf einem eigenen Server läuft und sich vom Handy aus bedienen lässt – auch per Sprache. Der Rundlauf muss nicht perfekt sein. Wichtig ist, dass der Agent ab dann **sich selbst weiterbauen kann**: Web-Kartensimulator, Gateway, Queue und Playdate-Anbindung entstehen in Gesprächen mit genau diesem Agenten.
 
@@ -43,8 +43,8 @@ Die ausführliche Anleitung mit allen Secrets und Variablen steht in [`infra/REA
 1. **Konten:** Hetzner Cloud (API-Token) und Pulumi Cloud (Token).
 2. **GitHub-Umgebung `infra`:** Secrets und Variablen eintragen: Token, erlaubte IPs, öffentlicher SSH-Schlüssel, Rollen. Nichts davon landet im Repo.
 3. **Server anlegen:** Workflow *Infrastruktur* mit `preview`, dann `up`. Cloud-Init installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste.
-4. **Anmelden:** Per SSH auf den Server, mit `tmux -L arborist-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
-5. **Rollen einrichten:** Die `CLAUDE.md` jeder Rolle liegt unter `~/roles/<rolle>/` und kommt aus einer Vorlage. Rollen mit eigenem Repo werden aus `ARBORIST_ROLE_REPOS` geklont.
+4. **Anmelden:** Per SSH auf den Server, mit `tmux -L pocket-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
+5. **Rollen einrichten:** Die `CLAUDE.md` jeder Rolle liegt unter `~/roles/<rolle>/` und kommt aus einer Vorlage. Rollen mit eigenem Repo werden aus `POCKET_CONCIERGE_ROLE_REPOS` geklont.
 6. **Vom Handy verbinden:**
    - In der Claude-App die Sitzung **concierge** öffnen; im Alltag nur mit ihr sprechen.
    - Sprechen über die Diktierfunktion von Handy bzw. App.
@@ -55,11 +55,11 @@ Die ausführliche Anleitung mit allen Secrets und Variablen steht in [`infra/REA
 
 | Befehl | Zweck |
 | --- | --- |
-| `arborist-status` | Rollen, offene und geparkte Aufträge, Quota-Pause |
-| `tmux -L arborist-<rolle> attach` | In eine Sitzung schauen (lösen: `Strg+b`, dann `d`) |
-| `arborist-inbox --to <rolle> "…"` | Auftrag in eine Inbox legen |
-| `sudo arborist-update` | Neuesten Stand dieses Repos holen und Host neu einrichten |
-| `journalctl -u arborist-watch -f` | Was der Watcher gerade tut |
+| `pocket-status` | Rollen, offene und geparkte Aufträge, Quota-Pause |
+| `tmux -L pocket-<rolle> attach` | In eine Sitzung schauen (lösen: `Strg+b`, dann `d`) |
+| `pocket-inbox --to <rolle> "…"` | Auftrag in eine Inbox legen |
+| `sudo pocket-update` | Neuesten Stand dieses Repos holen und Host neu einrichten |
+| `journalctl -u pocket-watch -f` | Was der Watcher gerade tut |
 
 ## Was damit schon geht
 

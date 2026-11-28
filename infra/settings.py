@@ -1,4 +1,4 @@
-"""Einstellungen einer Arborist-Instanz.
+"""Einstellungen einer Pocket-Concierge-Instanz.
 
 Alle persönlichen Werte kommen aus der Pulumi-Konfiguration, die der
 GitHub-Workflow aus Secrets und Variablen setzt. Im Repo stehen nur
@@ -44,12 +44,12 @@ class Settings:
     ssh_allowed_cidrs: list[str]
     repo_url: str
     provider: str = "hetzner"
-    name: str = "arborist"
+    name: str = "pocket-concierge"
     location: str = "nbg1"
     server_type: str = "cx23"
     image: str = "ubuntu-24.04"
     backups: bool = True
-    admin_user: str = "arborist"
+    admin_user: str = "pocket"
     repo_ref: str = "main"
     roles: list[str] = field(default_factory=lambda: ["concierge"])
     role_repos: dict[str, str] = field(default_factory=dict)

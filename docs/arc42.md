@@ -1,10 +1,10 @@
-# Architektur von Arborist nach arc42
+# Architektur von Pocket Concierge nach arc42
 
 > Gesamtarchitektur. Erster Meilenstein ist der Bootstrap in der Cloud ([`bootstrap.md`](bootstrap.md)), danach wird der Rest mit dem laufenden Agenten gebaut (Kapitel 12). Hintergrund und Betriebsmodi: [`vision.md`](vision.md).
 
 ## 1. Einführung und Ziele
 
-**Arborist** ist ein persönlicher Always-on-Agent auf Basis von Claude Code. Er läuft auf einer eigenen VM und hält Ordnung in allem, was im Alltag anfällt. Bedient wird er von einem vollwertigen HTML-Dashboard und von sehr eingeschränkten Geräten: Handhelds, E-Ink-Displays, Smart Glasses.
+**Pocket Concierge** ist ein persönlicher Always-on-Agent auf Basis von Claude Code. Er läuft auf einer eigenen VM und hält Ordnung in allem, was im Alltag anfällt. Bedient wird er von einem vollwertigen HTML-Dashboard und von sehr eingeschränkten Geräten: Handhelds, E-Ink-Displays, Smart Glasses.
 
 ### Anwendungsfälle
 
@@ -48,11 +48,11 @@ Nicht vorgesehen: dienstliche Daten, Mehrbenutzerbetrieb, Sprachausgabe.
 
 ```mermaid
 C4Context
-    title Systemkontext Arborist
+    title Systemkontext Pocket Concierge
 
     Person(user, "Nutzer", "Lädt Ideen und Aufgaben ab, liest Lagebild, wählt nächste Schritte")
 
-    System(arborist, "Arborist", "Persönlicher Always-on-Agent auf Basis von Claude Code")
+    System(pc, "Pocket Concierge", "Persönlicher Always-on-Agent auf Basis von Claude Code")
 
     System_Ext(anthropic, "Anthropic", "Claude-Modelle über das Abo des Nutzers")
     System_Ext(stt, "Transkription", "Lokal mit Whisper oder Voxtral-API")
@@ -61,13 +61,13 @@ C4Context
     System_Ext(git, "GitHub", "Kleine private Code-Projekte")
     System_Ext(mentra, "MentraOS", "Plattform für Smart Glasses wie die G1")
 
-    Rel(user, arborist, "Sprache, Text, Auswahl", "Dashboard, Playdate, E-Ink, Brille")
-    Rel(arborist, anthropic, "Modellaufrufe", "HTTPS")
-    Rel(arborist, stt, "Audio", "optional extern")
-    Rel(arborist, pim, "Termine, Mails", "über den Broker")
-    Rel(arborist, todo, "Aufgaben, Notizen", "über den Broker")
-    Rel(arborist, git, "Issues, Commits, PRs", "über den Broker")
-    Rel(mentra, arborist, "Sprache und Tasten von der Brille", "Miniapp")
+    Rel(user, pc, "Sprache, Text, Auswahl", "Dashboard, Playdate, E-Ink, Brille")
+    Rel(pc, anthropic, "Modellaufrufe", "HTTPS")
+    Rel(pc, stt, "Audio", "optional extern")
+    Rel(pc, pim, "Termine, Mails", "über den Broker")
+    Rel(pc, todo, "Aufgaben, Notizen", "über den Broker")
+    Rel(pc, git, "Issues, Commits, PRs", "über den Broker")
+    Rel(mentra, pc, "Sprache und Tasten von der Brille", "Miniapp")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -97,7 +97,7 @@ C4Context
 
 ```mermaid
 C4Container
-    title Container von Arborist
+    title Container von Pocket Concierge
 
     Person(user, "Nutzer")
 
@@ -108,11 +108,11 @@ C4Container
         Container(eink, "E-Ink-Display", "generisch", "Passives Mini-Dashboard")
     }
 
-    System_Boundary(vm, "Arborist-Instanz, eigener Server") {
+    System_Boundary(vm, "Pocket-Concierge-Instanz, eigener Server") {
         Container(gw, "Device-Gateway", "Python, FastAPI", "Registry, Ingest, Push, Ausgabe-Adapter")
         ContainerDb(q, "Eingangs-Queue", "SQLite", "Einträge mit Zustand und Verlauf")
         Container(intake, "Intake-Agent", "Python", "Transkription und Aufbereitung")
-        Container(ar, "Arborist", "Claude Code CLI", "Main-Agent, Projekt- und Lagebild-Subagenten")
+        Container(ar, "Main-Agent", "Claude Code CLI", "Concierge, Rollen, Projekt- und Lagebild-Subagenten")
         Container(br, "Rechte- und Tool-Broker", "MCP-Server", "Tokens, Rechte, Protokoll")
         Container(sched, "Scheduler", "systemd-Timer", "Nachtwartung, Erinnerungen")
     }
@@ -144,11 +144,11 @@ C4Container
 | Device-Gateway | Einziger Eingang. Geräte-Registry mit Token und Fähigkeiten, Ingest (chunked, idempotent), Push bzw. Pull, Ausgabe-Adapter |
 | Eingangs-Queue | Speichert jede Eingabe dauerhaft, bevor ein Modell beteiligt ist. Zustände und Verlauf |
 | Intake-Agent | Transkribiert, bereinigt, erkennt Bezug und Dringlichkeit. Kein Tool-Zugriff außer der Queue |
-| Arborist | Claude Code mit fortgesetzter Session. Holt Batches, ordnet Projekten zu, delegiert an Subagenten |
+| Main-Agent | Claude Code mit fortgesetzter Session. Holt Batches, ordnet Projekten zu, delegiert an Subagenten |
 | Rechte- und Tool-Broker | Hält alle externen Tokens, stellt dem Agenten genau einen MCP-Server mit den erlaubten Tools bereit |
 | Scheduler | Startet Nachtwartung und zeitgesteuerte Erinnerungen außerhalb des Agenten |
 
-### Ebene 3: Arborist intern
+### Ebene 3: Main-Agent intern
 
 ```mermaid
 flowchart LR
@@ -188,7 +188,7 @@ stateDiagram-v2
     received --> prepared: Text-Eingabe
     transcribed --> prepared: Intake-Agent bereitet auf
     prepared --> queued
-    queued --> in_progress: Arborist holt Batch
+    queued --> in_progress: Main-Agent holt Batch
     in_progress --> done
     in_progress --> parked: Rückfrage, Bestätigung oder Quota leer
     parked --> queued: Antwort da oder Quota-Reset
@@ -248,7 +248,7 @@ sequenceDiagram
     participant G as Gateway
     participant Q as Queue
     participant T as Intake
-    participant A as Arborist
+    participant A as Main-Agent
     participant I as Inbox (Playdate)
     O->>G: GET /rec/{id}
     G-->>O: vorhandene Chunks
@@ -273,7 +273,7 @@ sequenceDiagram
     actor N as Nutzer
     participant D as Gerät (Playdate oder Brille)
     participant G as Gateway
-    participant A as Arborist
+    participant A as Main-Agent
     G-->>D: Ansicht mit Auswahl „Erledigt / Verschieben / Details“
     N->>D: wählt „Verschieben“
     D->>G: POST /interaction
@@ -288,7 +288,7 @@ sequenceDiagram
 sequenceDiagram
     participant G as Gateway
     participant Q as Queue
-    participant A as Arborist
+    participant A as Main-Agent
     participant S as Scheduler
     G->>Q: Idee 1 ablegen
     G->>Q: Idee 2 ablegen
@@ -336,7 +336,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant A as Arborist
+    participant A as Main-Agent
     participant B as Tool-Broker
     participant G as Gateway
     actor N as Nutzer
@@ -375,7 +375,7 @@ flowchart TB
             subgraph Docker[Docker, je Instanz ein Satz]
                 GW[Device-Gateway]
                 IN[Intake-Agent]
-                AR[Arborist<br/>Claude Code]
+                AR[Main-Agent<br/>Claude Code]
                 BR[Tool-Broker]
                 DB[(SQLite-Volume)]
             end
@@ -397,7 +397,7 @@ flowchart TB
     SCH --> AR
 ```
 
-Netzwerk: Der Arborist-Container darf nur zum Broker und zu Anthropic. Nur der Reverse Proxy ist von außen erreichbar. Für den POC reicht ein Prozess.
+Netzwerk: Der Agent-Container darf nur zum Broker und zu Anthropic. Nur der Reverse Proxy ist von außen erreichbar. Für den POC reicht ein Prozess.
 
 ## 8. Querschnittliche Konzepte
 
@@ -473,7 +473,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 15 | Concierge als einziger Gesprächspartner | Eine Stelle für Sprache, Ordnen und Verteilen; entspricht dem Intake-Agenten |
 | 16 | Wiederanlauf über systemd, Sitzungen mit `--continue` | Alle Rollen kommen nach einem Neustart zurück; Herdr nur als optionale Admin-Ansicht |
 | 17 | Persönliche Werte nur in GitHub-Secrets und -Variablen, in Pulumi als Secrets markiert | Repo und Workflow-Logs sind öffentlich |
-| 18 | Server wird nach dem Anlegen nicht neu gebaut; Updates per `arborist-update` | Anmeldungen, Sitzungen und Inboxen bleiben erhalten |
+| 18 | Server wird nach dem Anlegen nicht neu gebaut; Updates per `pocket-update` | Anmeldungen, Sitzungen und Inboxen bleiben erhalten |
 | 19 | Web-Kartensimulator vor dem Playdate | Karten und Ablauf schneller iterieren; Server und Karten-DSL werden für den Playdate weiterverwendet |
 
 ## 10. Qualitätsszenarien

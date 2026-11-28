@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Projekt
-Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Teil von Arborist, einem 24/7-Assistenten auf Basis von Claude Code. Architektur des POC: `docs/arc42.md`, Vision und Scope: `docs/vision.md`.
+Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Teil von Pocket Concierge, einem 24/7-Assistenten auf Basis von Claude Code. Architektur des POC: `docs/arc42.md`, Vision und Scope: `docs/vision.md`.
 
 ## Sprache
 Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisch.
@@ -21,7 +21,7 @@ An jedem Arbeitstag einen Eintrag in `docs/devlog/JJJJ-MM-TT.md` anlegen oder er
 ## Infrastruktur und Host
 - `infra/`: Pulumi (Python), Standard Hetzner. Tests: `cd infra && python -m pytest -q`. Persönliche Werte nur über GitHub-Secrets/-Variablen; sensible Werte in Pulumi als Secret markieren, weil Workflow-Logs öffentlich sind.
 - `host/`: anbieterunabhängige Einrichtung (Bash, idempotent). Vor jedem Commit `shellcheck host/setup-host.sh host/bin/*`.
-- Den Server nie über Pulumi neu bauen lassen; Host-Änderungen laufen über `sudo arborist-update`.
+- Den Server nie über Pulumi neu bauen lassen; Host-Änderungen laufen über `sudo pocket-update`.
 
 ## Server
 - Python 3.11+, FastAPI, SQLite. Start: `uvicorn main:app` in `server/`.

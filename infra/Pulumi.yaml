@@ -1,5 +1,5 @@
-name: arborist-infra
-description: Server für eine Arborist-Instanz (Standard Hetzner Cloud)
+name: pocket-concierge-infra
+description: Server für eine Pocket-Concierge-Instanz (Standard Hetzner Cloud)
 runtime:
   name: python
   options:

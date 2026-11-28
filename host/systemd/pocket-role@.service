@@ -1,9 +1,9 @@
 # Eine Rollen-Sitzung (Claude Code mit Remote Control) in einer eigenen tmux-Sitzung.
-# Instanzname = Rolle, z. B. arborist-role@concierge.service
-# Anhängen: tmux -L arborist-<rolle> attach
+# Instanzname = Rolle, z. B. pocket-role@concierge.service
+# Anhängen: tmux -L pocket-<rolle> attach
 
 [Unit]
-Description=Arborist-Rolle %i
+Description=Pocket-Concierge-Rolle %i
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -13,8 +13,8 @@ Type=forking
 User=@USER@
 WorkingDirectory=~
 Environment=TERM=xterm-256color
-ExecStart=/usr/bin/tmux -L arborist-%i new-session -d -s %i -x 200 -y 50 /usr/local/bin/arborist-run %i
-ExecStop=/usr/bin/tmux -L arborist-%i kill-server
+ExecStart=/usr/bin/tmux -L pocket-%i new-session -d -s %i -x 200 -y 50 /usr/local/bin/pocket-run %i
+ExecStop=/usr/bin/tmux -L pocket-%i kill-server
 Restart=always
 RestartSec=30
 

@@ -1,10 +1,10 @@
-# Vision und Scope: Arborist
+# Vision und Scope: Pocket Concierge
 
 > Ergänzt [`arc42.md`](arc42.md). arc42 beschreibt den Playdate-POC, dieses Dokument das Zielbild und den Projektumfang.
 
 ## 1. Ziel
 
-**Arborist** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einem eigenen Server (Standard Hetzner Cloud). Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
+**Pocket Concierge** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einem eigenen Server (Standard Hetzner Cloud). Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
 
 - **Ideen abladen, später abarbeiten:** Eingaben werden sofort und sicher gespeichert. Wann der Agent sie bearbeitet, ist zweitrangig. Er arbeitet asynchron, in Schleifen und in Batches.
 - **Immer erreichbar:** Der Eingang ist 24/7 offen. Der Agent arbeitet im Rahmen der Abo-Quota; ist sie aufgebraucht, wartet er bis zum wöchentlichen Reset.
@@ -26,7 +26,7 @@ flowchart LR
     IN[Intake-Agent<br/>Transkription + Aufbereitung]
 
     subgraph VM[Eigener Server]
-        AR[Arborist<br/>Main-Agent, Claude Code]
+        AR[Main-Agent<br/>Claude Code]
         SA[Projekt-Subagenten]
         CS[Lagebild-Subagent<br/>Cheat Sheets + nächste Schritte]
     end
@@ -70,7 +70,7 @@ Das Herz des asynchronen Ablaufs. Alles, was ankommt, landet hier – dauerhaft 
 
 - **Sicher ablegen:** Eine Eingabe gilt als angenommen, sobald sie in der Queue steht. Das Gerät bekommt sofort eine Quittung („abgelegt“), unabhängig davon, ob der Agent gerade läuft oder die Quota leer ist.
 - **Zustände:** `received → transcribed → prepared → queued → in_progress → done/parked`. Geparkt wird, was auf Rückfrage, Bestätigung oder den Quota-Reset wartet.
-- **Batchweise abarbeiten:** Der Arborist holt sich mehrere Einträge auf einmal, gruppiert sie nach Projekt und Thema und arbeitet sie zusammen ab. Das spart Kontext und Quota.
+- **Batchweise abarbeiten:** Der Main-Agent holt sich mehrere Einträge auf einmal, gruppiert sie nach Projekt und Thema und arbeitet sie zusammen ab. Das spart Kontext und Quota.
 - **Wiederholbar:** Einträge bleiben nach der Bearbeitung erhalten (Verlauf fürs Dashboard und die Nachtwartung).
 - **Priorität:** Der Intake-Agent markiert Dringendes; dringende Einträge werden vor dem nächsten Batch gezogen.
 
@@ -87,14 +87,14 @@ Empfehlung zum Start: SQLite mit sauberem Zustandsmodell hinter einer kleinen Qu
 
 ### 3.4 Intake-Agent
 
-Steht vor dem Arborist und macht aus Rohdaten eine saubere Anweisung.
+Steht vor dem Main-Agent und macht aus Rohdaten eine saubere Anweisung.
 
 - Transkribiert Sprache über einen austauschbaren Provider: lokal (Whisper) oder Voxtral-API.
 - Bereinigt Füllwörter, erkennt Sprache, Bezug auf laufende Themen und Dringlichkeit.
 - Schreibt das Ergebnis als vorbereiteten Auftrag zurück in die Eingangs-Queue.
 - Darf ein kleines, günstiges Modell nutzen. Er hat keine Tools außer der Queue.
 
-### 3.5 Arborist (Main-Agent)
+### 3.5 Main-Agent
 
 Claude Code CLI, dauerhaft laufend, mit fortgesetzter Session.
 
@@ -117,7 +117,7 @@ Läuft immer mit und macht den Agenten auch ohne Sprache bedienbar.
 Der Agent bekommt **keine eigenen Tool-Anbindungen**. Alles Externe läuft über den Broker.
 
 - **Anmeldung:** Externe MCP-Server und APIs werden im Broker eingerichtet; der Nutzer meldet sich dort an. Der Broker hält alle Tokens. Der Agent sieht nie ein Token.
-- **Ein MCP-Server für den Agenten:** Der Broker stellt dem Arborist genau einen lokalen MCP-Server bereit. Darin stehen nur die Tools, die gerade erlaubt sind.
+- **Ein MCP-Server für den Agenten:** Der Broker stellt dem Main-Agent genau einen lokalen MCP-Server bereit. Darin stehen nur die Tools, die gerade erlaubt sind.
 - **Granulare Rechte:** Pro Tool (und pro Subagent bzw. Projekt) einstellbar: erlaubt, verboten oder nur nach Bestätigung. Bestätigungen laufen als Auswahl-Karte über das Gateway aufs Gerät.
 - **Protokoll:** Jeder Tool-Aufruf wird mitgeschrieben und ist im Dashboard sichtbar.
 - **Trennung:** Der Broker läuft in einem eigenen Container. Der Agent-Container enthält keine Zugangsdaten.
@@ -133,7 +133,7 @@ Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im A
 
 ## 5. Betriebsmodi und Nutzungslimits
 
-Claude Code mit Abo darf auf der eigenen VM laufen, solange man sich selbst über den offiziellen Anmeldeweg einloggt und das unveränderte Claude Code nutzt. Die Limits des Abos (Fünf-Stunden-Fenster und Wochenlimit) sind aber auf gewöhnliche, individuelle Nutzung ausgelegt. Ein Dauerbetrieb mit ständigen Aufrufen ist damit nicht gewährleistet – und muss es auch nicht sein. Arborist bleibt bewusst im Rahmen der Quota und ist **ereignisgesteuert**:
+Claude Code mit Abo darf auf der eigenen VM laufen, solange man sich selbst über den offiziellen Anmeldeweg einloggt und das unveränderte Claude Code nutzt. Die Limits des Abos (Fünf-Stunden-Fenster und Wochenlimit) sind aber auf gewöhnliche, individuelle Nutzung ausgelegt. Ein Dauerbetrieb mit ständigen Aufrufen ist damit nicht gewährleistet – und muss es auch nicht sein. Pocket Concierge bleibt bewusst im Rahmen der Quota und ist **ereignisgesteuert**:
 
 | Modus | Wann | Verhalten |
 | --- | --- | --- |
@@ -153,7 +153,7 @@ Regeln:
 
 **Drin:**
 
-- Arborist als 24/7-Main-Agent mit Projekt-Subagenten und Lagebild-Subagent
+- Main-Agent, 24/7, mit Projekt-Subagenten und Lagebild-Subagent
 - Intake-Agent mit Sprach-Transkription
 - Device-Gateway mit Registry, Ingest und Push
 - Clients: Playdate, Web-UI (Dashboard und Terminal), Handy (über Web-UI)

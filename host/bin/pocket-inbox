@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Legt einen Auftrag in die Inbox einer Rolle (atomar: erst temporär, dann umbenennen).
 #
-#   arborist-inbox --to wissen [--from concierge] [--priority dringend] [--reply-to concierge] "Text"
-#   echo "Text" | arborist-inbox --to bauen -
+#   pocket-inbox --to wissen [--from concierge] [--priority dringend] [--reply-to concierge] "Text"
+#   echo "Text" | pocket-inbox --to bauen -
 #
 # Gibt den Pfad der neuen Auftragsdatei aus.
 
 set -euo pipefail
 
-to="" from="${ARBORIST_ROLE:-$(basename "$PWD")}" priority="normal" reply_to=""
+to="" from="${POCKET_CONCIERGE_ROLE:-$(basename "$PWD")}" priority="normal" reply_to=""
 usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 while (($#)); do

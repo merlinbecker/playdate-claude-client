@@ -33,7 +33,7 @@ def make_settings(**overrides) -> Settings:
     values = dict(
         ssh_public_key=KEY,
         ssh_allowed_cidrs=["203.0.113.7/32"],
-        repo_url="https://github.com/example/arborist",
+        repo_url="https://github.com/example/pocket-concierge",
         roles=["concierge", "wissen", "bauen"],
         role_repos={"wissen": "git@github.com:example/wissen.git"},
     )
@@ -88,10 +88,10 @@ class CloudInitTest(unittest.TestCase):
         self.assertEqual(data["users"][0]["ssh_authorized_keys"], [KEY])
         files = {f["path"]: f for f in data["write_files"]}
         env = files[cloud_init.ENV_PATH]["content"]
-        self.assertIn("ARBORIST_ROLES='concierge wissen bauen'", env)
+        self.assertIn("POCKET_CONCIERGE_ROLES='concierge wissen bauen'", env)
         self.assertEqual(files[cloud_init.ROLE_REPOS_PATH]["permissions"], "0600")
         self.assertIn("wissen=git@github.com:example/wissen.git", files[cloud_init.ROLE_REPOS_PATH]["content"])
-        self.assertEqual(data["runcmd"][-1], ["bash", "/opt/arborist/host/setup-host.sh"])
+        self.assertEqual(data["runcmd"][-1], ["bash", "/opt/pocket-concierge/host/setup-host.sh"])
 
     def test_no_role_repos_file_when_empty(self):
         data = yaml.safe_load(cloud_init.render(make_settings(role_repos={})))
@@ -99,7 +99,7 @@ class CloudInitTest(unittest.TestCase):
 
     def test_env_quotes_values(self):
         env = cloud_init.render_env(make_settings(repo_url="https://x/y z"))
-        self.assertIn("ARBORIST_REPO_URL='https://x/y z'", env)
+        self.assertIn("POCKET_CONCIERGE_REPO_URL='https://x/y z'", env)
 
 
 class ProgramTest(unittest.TestCase):
@@ -135,16 +135,16 @@ class ProgramTest(unittest.TestCase):
 
         pulumi.runtime.set_mocks(
             Mocks(),
-            project="arborist-infra",
+            project="pocket-concierge-infra",
             stack="test",
             preview=False,
         )
         pulumi.runtime.set_all_config(
             {
-                "arborist:sshPublicKey": KEY,
-                "arborist:sshAllowedCidrs": "203.0.113.7/32",
-                "arborist:repoUrl": "https://github.com/example/arborist",
-                "arborist:roles": "concierge,wissen",
+                "pocket-concierge:sshPublicKey": KEY,
+                "pocket-concierge:sshAllowedCidrs": "203.0.113.7/32",
+                "pocket-concierge:repoUrl": "https://github.com/example/pocket-concierge",
+                "pocket-concierge:roles": "concierge,wissen",
             }
         )
 
@@ -168,7 +168,7 @@ class ProgramTest(unittest.TestCase):
             self.assertTrue(user_data_secret, "userData muss geheim sein")
             user_data = yaml.safe_load(raw_user_data)
             env = next(f["content"] for f in user_data["write_files"] if f["path"] == cloud_init.ENV_PATH)
-            self.assertIn("ARBORIST_ROLES='concierge wissen'", env)
+            self.assertIn("POCKET_CONCIERGE_ROLES='concierge wissen'", env)
             firewall = next(inputs for typ, inputs in created if typ == "hcloud:index/firewall:Firewall")
             rules, rules_secret = unwrap(firewall["rules"])
             ssh_rule = rules[0]

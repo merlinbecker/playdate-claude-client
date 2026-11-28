@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Startet die Claude-Code-Sitzung einer Rolle mit Remote Control.
-# Wird von arborist-role@<rolle>.service in einer eigenen tmux-Sitzung aufgerufen.
+# Wird von pocket-role@<rolle>.service in einer eigenen tmux-Sitzung aufgerufen.
 #
 # Gibt es für das Arbeitsverzeichnis schon einen Verlauf, wird er mit
 # --continue fortgesetzt. So kommt eine Rolle nach einem Neustart der VM mit
@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-role="${1:?Aufruf: arborist-run <rolle>}"
+role="${1:?Aufruf: pocket-run <rolle>}"
 [[ $role =~ ^[a-z][a-z0-9-]{0,30}$ ]] || { echo "Ungültiger Rollenname: $role" >&2; exit 2; }
 
 dir="$HOME/roles/$role"

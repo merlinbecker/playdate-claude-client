@@ -1,6 +1,6 @@
 # Rollen und Sitzungen
 
-Arborist läuft nicht als ein einziger Agent, sondern als mehrere **Rollen**, jede in ihrer eigenen Claude-Code-Sitzung. Vorne steht ein **Concierge**, mit dem man spricht. Dahinter arbeiten Rollen-Agenten mit klar getrennten Aufgaben, zum Beispiel einer für Wissen und Notizen und einer für Code-Projekte. Welche Rollen es gibt, wie sie heißen und wie sie sich verhalten, legt jede Instanz selbst fest. Das Repo liefert nur das Muster.
+Pocket Concierge läuft nicht als ein einziger Agent, sondern als mehrere **Rollen**, jede in ihrer eigenen Claude-Code-Sitzung. Vorne steht ein **Concierge**, mit dem man spricht. Dahinter arbeiten Rollen-Agenten mit klar getrennten Aufgaben, zum Beispiel einer für Wissen und Notizen und einer für Code-Projekte. Welche Rollen es gibt, wie sie heißen und wie sie sich verhalten, legt jede Instanz selbst fest. Das Repo liefert nur das Muster.
 
 ## Warum getrennte Sitzungen
 

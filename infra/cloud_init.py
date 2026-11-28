@@ -1,7 +1,7 @@
 """Erzeugt die Cloud-Init-Konfiguration für den ersten Start des Servers.
 
 Cloud-Init legt nur das Nötigste an: Benutzer, SSH-Härtung, Konfiguration
-unter /etc/arborist und den Klon dieses Repos. Alles Weitere erledigt
+unter /etc/pocket-concierge und den Klon dieses Repos. Alles Weitere erledigt
 host/setup-host.sh, das sich später jederzeit erneut ausführen lässt.
 """
 
@@ -13,9 +13,9 @@ import yaml
 
 from settings import Settings
 
-ENV_PATH = "/etc/arborist/arborist.env"
-ROLE_REPOS_PATH = "/etc/arborist/role-repos"
-CHECKOUT = "/opt/arborist"
+ENV_PATH = "/etc/pocket-concierge/pocket-concierge.env"
+ROLE_REPOS_PATH = "/etc/pocket-concierge/role-repos"
+CHECKOUT = "/opt/pocket-concierge"
 
 
 class _Dumper(yaml.SafeDumper):
@@ -32,11 +32,11 @@ _Dumper.add_representer(str, _str)
 
 def render_env(settings: Settings) -> str:
     values = {
-        "ARBORIST_USER": settings.admin_user,
-        "ARBORIST_ROLES": " ".join(settings.roles),
-        "ARBORIST_REPO_URL": settings.repo_url,
-        "ARBORIST_REPO_REF": settings.repo_ref,
-        "ARBORIST_SWAP_GB": str(settings.swap_gb),
+        "POCKET_CONCIERGE_USER": settings.admin_user,
+        "POCKET_CONCIERGE_ROLES": " ".join(settings.roles),
+        "POCKET_CONCIERGE_REPO_URL": settings.repo_url,
+        "POCKET_CONCIERGE_REPO_REF": settings.repo_ref,
+        "POCKET_CONCIERGE_SWAP_GB": str(settings.swap_gb),
     }
     lines = ["# Von Pulumi erzeugt. Änderungen hier überschreibt kein späteres Deployment."]
     lines += [f"{key}={shlex.quote(value)}" for key, value in values.items()]

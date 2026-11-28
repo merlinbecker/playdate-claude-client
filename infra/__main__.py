@@ -1,9 +1,9 @@
-"""Pulumi-Programm für eine Arborist-Instanz.
+"""Pulumi-Programm für eine Pocket-Concierge-Instanz.
 
 Standard ist ein kleiner Server bei Hetzner Cloud. Der Server wird bei
 Änderungen an Cloud-Init oder Image bewusst NICHT neu gebaut, damit
 Sitzungen, Inboxen und Anmeldungen erhalten bleiben. Spätere Änderungen
-am Host laufen über `arborist-update` auf dem Server selbst.
+am Host laufen über `pocket-update` auf dem Server selbst.
 
 Persönliche Werte (erlaubte IPs, Repo-URLs in Cloud-Init, Server-Adressen)
 werden als Pulumi-Secrets behandelt. So tauchen sie auch in öffentlichen
@@ -19,7 +19,7 @@ from settings import Settings, parse_role_repos, split_list
 
 
 def load_settings() -> Settings:
-    cfg = pulumi.Config("arborist")
+    cfg = pulumi.Config("pocket-concierge")
     settings = Settings(
         ssh_public_key=cfg.require("sshPublicKey").strip(),
         ssh_allowed_cidrs=split_list(cfg.require("sshAllowedCidrs")),
@@ -45,7 +45,7 @@ def load_settings() -> Settings:
 def deploy_hetzner(settings: Settings) -> dict:
     import pulumi_hcloud as hcloud
 
-    labels = {"app": "arborist", "instance": settings.name}
+    labels = {"app": "pocket-concierge", "instance": settings.name}
 
     key = hcloud.SshKey(
         f"{settings.name}-key",

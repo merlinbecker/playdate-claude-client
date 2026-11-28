@@ -1,6 +1,6 @@
 # Devlog
 
-Ein kurzes Entwicklertagebuch zu Arborist. Ein Eintrag pro Arbeitstag, geschrieben für Leute, die einfach mitlesen wollen – nicht für Entwickler, die den Code verstehen müssen.
+Ein kurzes Entwicklertagebuch zu Pocket Concierge. Ein Eintrag pro Arbeitstag, geschrieben für Leute, die einfach mitlesen wollen – nicht für Entwickler, die den Code verstehen müssen.
 
 ## Regeln für Einträge
 
@@ -15,7 +15,7 @@ Ein kurzes Entwicklertagebuch zu Arborist. Ein Eintrag pro Arbeitstag, geschrieb
 ---
 title: "Kurzer Titel"
 date: JJJJ-MM-TT
-tags: [arborist, claude-code, playdate]
+tags: [pocket-concierge, claude-code, playdate]
 summary: "Ein Satz, worum es heute ging."
 ---
 ```
