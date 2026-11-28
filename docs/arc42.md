@@ -25,6 +25,33 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 
 ## 3. Kontextabgrenzung
 
+Systemkontext von Arborist (C4, Ebene 1):
+
+```mermaid
+C4Context
+    title Systemkontext Arborist
+
+    Person(user, "Nutzer", "Lädt Ideen und Aufgaben per Sprache, Text oder Auswahl ab")
+
+    System(arborist, "Arborist", "Persönlicher 24/7-Assistent auf Basis von Claude Code")
+
+    System_Ext(anthropic, "Anthropic", "Claude-Modelle über das Abo des Nutzers")
+    System_Ext(voxtral, "Mistral Voxtral", "Transkription per API, optional")
+    System_Ext(git, "Git-Hosting", "Repos, die der Agent bearbeitet")
+    System_Ext(tools, "Externe Dienste", "MCP-Server und APIs, z. B. To-do-Dienst")
+
+    Rel(user, arborist, "Sprache, Text, Auswahl", "Playdate, Web-UI, Handy")
+    Rel(arborist, user, "Karten, Lagebild, Benachrichtigungen")
+    Rel(arborist, anthropic, "Prompts und Antworten", "HTTPS")
+    Rel(arborist, voxtral, "Audio", "HTTPS, optional")
+    Rel(arborist, git, "Commits, Pull Requests", "über den Broker")
+    Rel(arborist, tools, "Tool-Aufrufe", "über den Broker")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+Für den POC relevant:
+
 | Nachbar | Richtung | Inhalt |
 | --- | --- | --- |
 | Playdate | → Server | Audio-Chunks, Interaktionen (Auswahl) |
@@ -44,7 +71,68 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 
 ## 5. Bausteinsicht
 
-### Playdate-Client
+### Zielbild Arborist (C4, Ebene 2)
+
+```mermaid
+C4Container
+    title Container von Arborist
+
+    Person(user, "Nutzer")
+
+    System_Boundary(devices, "Geräte") {
+        Container(pd, "Playdate-Client", "Lua, SDK 2.x", "Aufnahme, Outbox, Inbox, Karten-Renderer")
+        Container(web, "Web-UI", "Browser, auch mobil", "Dashboard, Lagebild, Terminal")
+    }
+
+    System_Boundary(vm, "Azure-VM") {
+        Container(gw, "Device-Gateway", "Python, FastAPI", "Registry, Ingest, Push, Ausgabe-Adapter")
+        ContainerDb(q, "Eingangs-Queue", "SQLite", "Einträge mit Zustand und Verlauf")
+        Container(intake, "Intake-Agent", "Python", "Transkription und Aufbereitung")
+        Container(ar, "Arborist", "Claude Code CLI", "Main-Agent mit Projekt- und Lagebild-Subagenten")
+        Container(br, "Rechte- und Tool-Broker", "MCP-Server", "Tokens, Rechte, Protokoll")
+        Container(sched, "Scheduler", "systemd-Timer oder Cron", "Nachtwartung, Wiedervorlagen")
+    }
+
+    System_Ext(anthropic, "Anthropic")
+    System_Ext(tools, "Externe Dienste")
+
+    Rel(user, pd, "spricht, wählt aus")
+    Rel(user, web, "spricht, tippt, liest")
+    Rel(pd, gw, "Chunks hoch, Inbox abholen", "HTTPS, Pull")
+    Rel(web, gw, "Eingaben, Push", "HTTPS, WebSocket")
+    Rel(gw, q, "legt Eingaben ab")
+    Rel(intake, q, "liest roh, schreibt vorbereitet")
+    Rel(ar, q, "holt Batches")
+    Rel(ar, gw, "Karten und Lagebild")
+    Rel(ar, br, "Tool-Aufrufe", "MCP")
+    Rel(br, tools, "mit gespeicherten Tokens")
+    Rel(ar, anthropic, "Modellaufrufe", "HTTPS")
+    Rel(sched, ar, "startet Wartung")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
+```
+
+### Zustände eines Queue-Eintrags
+
+```mermaid
+stateDiagram-v2
+    [*] --> received: Gerät liefert
+    received --> transcribed: Audio transkribiert
+    received --> prepared: Text-Eingabe
+    transcribed --> prepared: Intake-Agent bereitet auf
+    prepared --> queued
+    queued --> in_progress: Arborist holt Batch
+    in_progress --> done
+    in_progress --> parked: Rückfrage, Bestätigung oder Quota leer
+    parked --> queued: Antwort da oder Quota-Reset
+    in_progress --> error
+    error --> queued: erneuter Versuch
+    done --> [*]
+```
+
+### POC-Bausteine
+
+#### Playdate-Client
 
 | Baustein | Aufgabe |
 | --- | --- |
@@ -55,7 +143,7 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 | Asset-Cache | Tilesets und Bitmaps nach Hash |
 | Input | A = sprechen/auswählen, Kurbel = scrollen, Steuerkreuz = Auswahl |
 
-### Server
+#### Server
 
 | Baustein | Aufgabe |
 | --- | --- |
@@ -71,11 +159,50 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 
 ### Szenario A: Sprechen ohne Netz
 
+```mermaid
+sequenceDiagram
+    actor N as Nutzer
+    participant R as Recorder
+    participant O as Outbox
+    N->>R: A halten
+    R->>R: in Sample aufnehmen
+    N->>R: A loslassen
+    R->>R: WAV speichern, auf 8,8 kHz herunterrechnen
+    R->>O: Aufnahme rec/{id} eintragen
+    O-->>N: Status „wartet auf Netz“
+    Note over O: Upload startet, sobald WLAN da ist und die App läuft
+```
+
 1. A halten: Recorder nimmt in ein Sample auf.
 2. A loslassen: Sample wird als WAV gespeichert, heruntergerechnet und als `rec/<id>.raw` abgelegt. Eintrag in der Outbox, Status „wartet auf Netz“.
 3. Sobald WLAN da ist und die App läuft, beginnt die Outbox mit dem Upload.
 
 ### Szenario B: Upload und Ausführung
+
+```mermaid
+sequenceDiagram
+    participant O as Outbox (Playdate)
+    participant G as Gateway
+    participant Q as Queue
+    participant T as Transkription
+    participant A as Agent-Worker
+    participant I as Inbox (Playdate)
+    O->>G: GET /rec/{id}
+    G-->>O: vorhandene Chunks
+    loop fehlende Chunks
+        O->>G: PUT /rec/{id}/chunk/{n}
+    end
+    O->>G: POST /rec/{id}/done
+    G->>Q: Eintrag „received“
+    G-->>O: Quittung „abgelegt“
+    Q->>T: Audio
+    T->>Q: Text, Statuskarte „Verstanden: …“
+    A->>Q: Batch holen
+    A->>A: Claude Code verarbeitet
+    A->>G: Karten
+    I->>G: GET /inbox?since=
+    G-->>I: neue Karten
+```
 
 1. Outbox fragt `GET /rec/{id}` und erfährt, welche Chunks der Server schon hat.
 2. Fehlende Chunks werden per `PUT` gesendet.
@@ -85,9 +212,50 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 
 ### Szenario C: Interaktion
 
+```mermaid
+sequenceDiagram
+    actor N as Nutzer
+    participant P as Playdate
+    participant G as Gateway
+    participant A as Agent-Worker
+    G-->>P: Karte mit Auswahl „Deployen / Später“
+    N->>P: wählt „Deployen“
+    P->>G: POST /interaction
+    G->>A: neuer Job in derselben Session
+    A->>G: Folgekarte
+    P->>G: GET /inbox?since=
+    G-->>P: Folgekarte
+```
+
 1. Karte bietet Auswahl, z. B. „Deployen / Später“.
 2. Auswahl wird über die Outbox an `/interaction` gesendet.
 3. Der Server legt einen Job an, der Agent antwortet in derselben Session mit einer neuen Karte.
+
+### Szenario D: Asynchrone Abarbeitung und leere Quota
+
+```mermaid
+sequenceDiagram
+    participant G as Gateway
+    participant Q as Queue
+    participant A as Arborist
+    participant S as Scheduler
+    G->>Q: Idee 1 ablegen
+    G->>Q: Idee 2 ablegen
+    A->>Q: Batch holen
+    Q-->>A: Idee 1, Idee 2
+    A->>A: nach Projekt gruppieren und bearbeiten
+    alt Quota reicht
+        A->>Q: beide „done“
+        A->>G: Karten und Lagebild
+    else Quota aufgebraucht
+        A->>Q: Rest „parked“
+        Note over A: pausiert bis zum Reset
+        G->>Q: neue Ideen werden weiter abgelegt
+    end
+    S->>A: nachts Wartung starten
+    A->>Q: Tagesverlauf lesen
+    A->>A: Zusammenfassen, Gedächtnis pflegen, nächsten Tag planen
+```
 
 ## 7. Verteilungssicht
 
@@ -96,7 +264,44 @@ Stakeholder: Betreiber des eigenen Servers, der zugleich einziger Nutzer ist.
 | POC | Lokaler Rechner (Linux, macOS, WSL2) | LAN, HTTP mit Token | Ablauf und Latenz testen |
 | V2 | Azure-VM (z. B. B2s, 2 vCPU, 4 GB RAM), per Pulumi provisioniert, Docker | HTTPS über Reverse Proxy, nur Port 443 | Dauerbetrieb |
 
-In V2 läuft der Server als Docker-Container, je Instanz ein eigener Satz. Für den POC reicht ein Prozess.
+In V2 läuft der Server als Docker-Container, je Instanz ein eigener Satz.
+
+```mermaid
+flowchart TB
+    subgraph Geräte
+        PD[Playdate]
+        WEB[Browser / Handy]
+    end
+
+    subgraph Azure[Azure, per Pulumi provisioniert]
+        subgraph VM[Linux-VM, z. B. B2s]
+            RP[Reverse Proxy<br/>HTTPS, Port 443]
+            subgraph Docker[Docker, je Instanz ein Satz]
+                GW[Device-Gateway]
+                IN[Intake-Agent]
+                AR[Arborist<br/>Claude Code]
+                BR[Tool-Broker]
+                DB[(SQLite-Volume)]
+            end
+            SCH[Scheduler]
+        end
+        KV[Key Vault<br/>Broker-Secrets]
+    end
+
+    ANT[Anthropic]
+    EXT[Externe Dienste]
+
+    PD & WEB -->|HTTPS| RP --> GW
+    GW --- DB
+    IN --- DB
+    AR --- DB
+    AR -->|MCP| BR --> EXT
+    BR -.-> KV
+    AR --> ANT
+    SCH --> AR
+```
+
+Netzwerk: Der Arborist-Container darf nur zum Broker und zu Anthropic. Nur der Reverse Proxy ist von außen erreichbar. Für den POC reicht ein Prozess.
 
 ## 8. Querschnittliche Konzepte
 
