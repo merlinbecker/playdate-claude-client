@@ -35,7 +35,10 @@ id "$POCKET_CONCIERGE_USER" >/dev/null 2>&1 || { echo "Benutzer $POCKET_CONCIERG
 USER_HOME="$(getent passwd "$POCKET_CONCIERGE_USER" | cut -d: -f6)"
 ROLES_DIR="$USER_HOME/roles"
 
-as_user() { sudo -u "$POCKET_CONCIERGE_USER" -H "$@"; }
+# runuser statt sudo: sudo prüft auch das Konto von root. Hetzner markiert das
+# Root-Passwort als abgelaufen (Änderung beim ersten Konsolen-Login); sudo bricht
+# dann mit „Account or password is expired“ ab.
+as_user() { (cd "$USER_HOME" && runuser -u "$POCKET_CONCIERGE_USER" -- env HOME="$USER_HOME" USER="$POCKET_CONCIERGE_USER" LOGNAME="$POCKET_CONCIERGE_USER" "$@"); }
 
 # --- 1. Pakete und Swap -------------------------------------------------------
 log "Pakete"
