@@ -12,7 +12,7 @@ Auf dem Server laufen mehrere Rollen in eigenen Sitzungen: vorne der **Concierge
 flowchart LR
     H[Handy<br/>Claude-App, Diktat] --> A[Anthropic<br/>Remote Control]
     B[Browser<br/>claude.ai/code] --> A
-    S[Laptop<br/>SSH] --> VM
+    S[Laptop<br/>Tailscale SSH] -.->|privates Netz| VM
     A <-->|nur ausgehend| VM
     GH[GitHub Actions<br/>Pulumi] -->|legt an| VM
 
@@ -40,10 +40,10 @@ Alles ab `host/` ist anbieterunabhängig. Nur `infra/` kennt den Anbieter.
 
 Die ausführliche Anleitung mit allen Secrets und Variablen steht in [`infra/README.md`](../infra/README.md).
 
-1. **Konten:** Hetzner Cloud (API-Token) und Pulumi Cloud (Token).
-2. **GitHub-Umgebung `infra`:** Secrets und Variablen eintragen: Token, erlaubte IPs, öffentlicher SSH-Schlüssel, Rollen. Nichts davon landet im Repo.
+1. **Konten:** Hetzner Cloud (API-Token), Pulumi Cloud (Token) und Tailscale (Auth-Key). Tailscale auch auf Laptop und Handy installieren.
+2. **GitHub-Umgebung `infra`:** Secrets und Variablen eintragen: die drei Tokens, optional die Rollen. Nichts davon landet im Repo.
 3. **Server anlegen:** Workflow *Infrastruktur* mit `preview`, dann `up`. Cloud-Init installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste.
-4. **Anmelden:** Per SSH auf den Server, mit `tmux -L pocket-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
+4. **Anmelden:** Über Tailscale per `ssh pocket@pocket-concierge` auf den Server, mit `tmux -L pocket-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
 5. **Rollen einrichten:** Die `CLAUDE.md` jeder Rolle liegt unter `~/roles/<rolle>/` und kommt aus einer Vorlage. Rollen mit eigenem Repo werden aus `POCKET_CONCIERGE_ROLE_REPOS` geklont.
 6. **Vom Handy verbinden:**
    - In der Claude-App die Sitzung **concierge** öffnen; im Alltag nur mit ihr sprechen.

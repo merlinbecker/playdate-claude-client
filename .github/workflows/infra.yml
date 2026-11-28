@@ -44,8 +44,7 @@ jobs:
       PULUMI_BACKEND_URL: ${{ vars.PULUMI_BACKEND_URL }}
       PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
       # Persönliche Werte
-      SSH_PUBLIC_KEY: ${{ vars.POCKET_CONCIERGE_SSH_PUBLIC_KEY }}
-      SSH_ALLOWED_CIDRS: ${{ secrets.POCKET_CONCIERGE_SSH_ALLOWED_CIDRS }}
+      TAILSCALE_AUTHKEY: ${{ secrets.POCKET_CONCIERGE_TAILSCALE_AUTHKEY }}
       ROLE_REPOS: ${{ secrets.POCKET_CONCIERGE_ROLE_REPOS }}
       # Optionale Einstellungen (leer = Standard aus infra/settings.py)
       ROLES: ${{ vars.POCKET_CONCIERGE_ROLES }}
@@ -76,8 +75,7 @@ jobs:
           missing=()
           [ -n "$HCLOUD_TOKEN" ] || missing+=("Secret HCLOUD_TOKEN")
           [ -n "$PULUMI_ACCESS_TOKEN$PULUMI_BACKEND_URL" ] || missing+=("Secret PULUMI_ACCESS_TOKEN oder Variable PULUMI_BACKEND_URL")
-          [ -n "$SSH_PUBLIC_KEY" ] || missing+=("Variable POCKET_CONCIERGE_SSH_PUBLIC_KEY")
-          [ -n "$SSH_ALLOWED_CIDRS" ] || missing+=("Secret POCKET_CONCIERGE_SSH_ALLOWED_CIDRS")
+          [ -n "$TAILSCALE_AUTHKEY" ] || missing+=("Secret POCKET_CONCIERGE_TAILSCALE_AUTHKEY")
           if [ ${#missing[@]} -gt 0 ]; then
             printf '::error::Fehlt in der Umgebung "infra": %s\n' "${missing[@]}"
             exit 1
@@ -90,8 +88,7 @@ jobs:
 
           set_opt() { if [ -n "$2" ]; then pulumi config set "pocket-concierge:$1" -- "$2"; else pulumi config rm "pocket-concierge:$1" 2>/dev/null || true; fi; }
           pulumi config set pocket-concierge:repoUrl -- "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
-          pulumi config set pocket-concierge:sshPublicKey -- "$SSH_PUBLIC_KEY"
-          pulumi config set --secret pocket-concierge:sshAllowedCidrs -- "$SSH_ALLOWED_CIDRS"
+          pulumi config set --secret pocket-concierge:tailscaleAuthKey -- "$TAILSCALE_AUTHKEY"
           if [ -n "$ROLE_REPOS" ]; then pulumi config set --secret pocket-concierge:roleRepos -- "$ROLE_REPOS"; else pulumi config rm pocket-concierge:roleRepos 2>/dev/null || true; fi
           set_opt roles "$ROLES"
           set_opt location "$LOCATION"

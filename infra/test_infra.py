@@ -26,13 +26,12 @@ def unwrap(value):
     return value, False
 
 
-KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKeyOnly test@example"
+KEY = "tskey-auth-kTEST123CNTRL-abcdefTestOnly"
 
 
 def make_settings(**overrides) -> Settings:
     values = dict(
-        ssh_public_key=KEY,
-        ssh_allowed_cidrs=["203.0.113.7/32"],
+        tailscale_auth_key=KEY,
         repo_url="https://github.com/example/pocket-concierge",
         roles=["concierge", "wissen", "bauen"],
         role_repos={"wissen": "git@github.com:example/wissen.git"},
@@ -57,13 +56,9 @@ class SettingsTest(unittest.TestCase):
     def test_valid(self):
         make_settings().validate()
 
-    def test_rejects_open_ssh(self):
+    def test_rejects_bad_server_name(self):
         with self.assertRaises(ValueError):
-            make_settings(ssh_allowed_cidrs=["0.0.0.0/0"]).validate()
-
-    def test_rejects_cidr_without_prefix(self):
-        with self.assertRaises(ValueError):
-            make_settings(ssh_allowed_cidrs=["203.0.113.7"]).validate()
+            make_settings(name="Mein Server").validate()
 
     def test_rejects_repo_for_unknown_role(self):
         with self.assertRaises(ValueError):
@@ -75,7 +70,7 @@ class SettingsTest(unittest.TestCase):
 
     def test_rejects_bad_key(self):
         with self.assertRaises(ValueError):
-            make_settings(ssh_public_key="kein-schluessel").validate()
+            make_settings(tailscale_auth_key="kein-schluessel").validate()
 
 
 class CloudInitTest(unittest.TestCase):
@@ -85,8 +80,11 @@ class CloudInitTest(unittest.TestCase):
         data = yaml.safe_load(text)
         self.assertFalse(data["ssh_pwauth"])
         self.assertTrue(data["disable_root"])
-        self.assertEqual(data["users"][0]["ssh_authorized_keys"], [KEY])
+        self.assertNotIn("ssh_authorized_keys", data["users"][0])
+        self.assertEqual(data["hostname"], "pocket-concierge")
         files = {f["path"]: f for f in data["write_files"]}
+        self.assertEqual(files[cloud_init.TAILSCALE_KEY_PATH]["permissions"], "0600")
+        self.assertEqual(files[cloud_init.TAILSCALE_KEY_PATH]["content"].strip(), KEY)
         env = files[cloud_init.ENV_PATH]["content"]
         self.assertIn("POCKET_CONCIERGE_ROLES='concierge wissen bauen'", env)
         self.assertEqual(files[cloud_init.ROLE_REPOS_PATH]["permissions"], "0600")
@@ -141,8 +139,7 @@ class ProgramTest(unittest.TestCase):
         )
         pulumi.runtime.set_all_config(
             {
-                "pocket-concierge:sshPublicKey": KEY,
-                "pocket-concierge:sshAllowedCidrs": "203.0.113.7/32",
+                "pocket-concierge:tailscaleAuthKey": KEY,
                 "pocket-concierge:repoUrl": "https://github.com/example/pocket-concierge",
                 "pocket-concierge:roles": "concierge,wissen",
             }
@@ -157,7 +154,7 @@ class ProgramTest(unittest.TestCase):
 
         def check(_):
             types = [typ for typ, _ in created]
-            self.assertIn("hcloud:index/sshKey:SshKey", types)
+            self.assertNotIn("hcloud:index/sshKey:SshKey", types)
             self.assertIn("hcloud:index/firewall:Firewall", types)
             self.assertIn("hcloud:index/server:Server", types)
             server = next(inputs for typ, inputs in created if typ == "hcloud:index/server:Server")
@@ -166,20 +163,21 @@ class ProgramTest(unittest.TestCase):
             self.assertTrue(server["backups"])
             raw_user_data, user_data_secret = unwrap(server["userData"])
             self.assertTrue(user_data_secret, "userData muss geheim sein")
+            self.assertNotIn("sshKeys", {k for k, v in server.items() if v})
             user_data = yaml.safe_load(raw_user_data)
             env = next(f["content"] for f in user_data["write_files"] if f["path"] == cloud_init.ENV_PATH)
             self.assertIn("POCKET_CONCIERGE_ROLES='concierge wissen'", env)
             firewall = next(inputs for typ, inputs in created if typ == "hcloud:index/firewall:Firewall")
-            rules, rules_secret = unwrap(firewall["rules"])
-            ssh_rule = rules[0]
-            self.assertEqual(ssh_rule["port"], "22")
-            source_ips, ips_secret = unwrap(ssh_rule["sourceIps"])
-            self.assertTrue(rules_secret or ips_secret, "erlaubte IPs müssen geheim sein")
-            self.assertEqual(source_ips, ["203.0.113.7/32"])
+            rules, _ = unwrap(firewall["rules"])
+            self.assertFalse(
+                any(rule.get("protocol") == "tcp" and rule.get("port") == "22" for rule in rules),
+                "SSH darf von außen nicht offen sein",
+            )
+            self.assertTrue(any(rule.get("port") == "41641" for rule in rules), "Tailscale-Port fehlt")
             self.checked = True
 
         res = module.resources
-        return pulumi.Output.all(res["key"].urn, res["firewall"].urn, res["server"].urn).apply(check)
+        return pulumi.Output.all(res["firewall"].urn, res["server"].urn).apply(check)
 
 
 if __name__ == "__main__":

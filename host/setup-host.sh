@@ -6,6 +6,7 @@
 #
 # Was passiert:
 #   1. Pakete und Swap
+#   1b. Tailscale: Beitritt zum Tailnet mit Tailscale SSH (einziger Zugang von außen)
 #   2. Claude Code für den Pocket-Concierge-Benutzer (offizieller Installer)
 #   3. Ein Arbeitsverzeichnis pro Rolle mit inbox/, ggf. aus einem eigenen Repo
 #   4. Hilfsprogramme nach /usr/local/bin
@@ -15,6 +16,7 @@ set -euo pipefail
 
 ENV_FILE="${POCKET_CONCIERGE_ENV_FILE:-/etc/pocket-concierge/pocket-concierge.env}"
 REPOS_FILE="${POCKET_CONCIERGE_REPOS_FILE:-/etc/pocket-concierge/role-repos}"
+TS_KEY_FILE="${POCKET_CONCIERGE_TS_KEY_FILE:-/etc/pocket-concierge/tailscale-authkey}"
 HOST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log() { printf '[pocket-setup] %s\n' "$*"; }
@@ -54,6 +56,30 @@ if [[ $SWAP_GB -gt 0 ]] && ! swapon --show=NAME --noheadings | grep -q .; then
   mkswap /swapfile >/dev/null
   swapon /swapfile
   grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# --- 1b. Tailscale --------------------------------------------------------------
+if ! command -v tailscale >/dev/null 2>&1; then
+  log "Tailscale installieren"
+  curl -fsSL https://tailscale.com/install.sh | sh
+fi
+systemctl enable --now tailscaled >/dev/null 2>&1 || true
+
+if tailscale status >/dev/null 2>&1; then
+  log "Tailscale ist verbunden: $(tailscale ip -4 2>/dev/null | head -1)"
+  rm -f "$TS_KEY_FILE"
+elif [[ -s $TS_KEY_FILE ]]; then
+  log "Tailscale: dem Tailnet beitreten"
+  ts_key="$(tr -d '[:space:]' < "$TS_KEY_FILE")"
+  if tailscale up --authkey="$ts_key" --ssh --hostname="${POCKET_CONCIERGE_HOSTNAME:-pocket-concierge}"; then
+    rm -f "$TS_KEY_FILE"   # Einmal-Schlüssel nach Gebrauch entfernen
+    log "Tailscale verbunden: $(tailscale ip -4 2>/dev/null | head -1)"
+  else
+    warn "Tailscale-Beitritt fehlgeschlagen (Auth-Key abgelaufen oder schon benutzt?). Neuen Key nach $TS_KEY_FILE schreiben und dieses Skript erneut ausführen."
+  fi
+  unset ts_key
+else
+  warn "Kein Tailscale-Auth-Key gefunden ($TS_KEY_FILE). Der Server ist dann nur über die Hetzner-Konsole erreichbar."
 fi
 
 # --- 2. Claude Code -----------------------------------------------------------
@@ -138,7 +164,8 @@ log "Fertig. Rollen: $POCKET_CONCIERGE_ROLES"
 cat <<EOF
 
 Nächste Schritte (einmalig):
-  1. Als $POCKET_CONCIERGE_USER einloggen und je Rolle anmelden:
+  1. Von einem Gerät in deinem Tailnet: ssh $POCKET_CONCIERGE_USER@${POCKET_CONCIERGE_HOSTNAME:-pocket-concierge}
+     Dann je Rolle anmelden:
        tmux -L pocket-<rolle> attach      (Abmelden vom Fenster: Strg+b, dann d)
      In der Sitzung /login ausführen und die Rückfrage für Remote Control bestätigen.
   2. In der Claude-App die Sitzung "concierge" öffnen.

@@ -40,8 +40,7 @@ def parse_role_repos(value: str | None) -> dict[str, str]:
 
 @dataclass
 class Settings:
-    ssh_public_key: str
-    ssh_allowed_cidrs: list[str]
+    tailscale_auth_key: str
     repo_url: str
     provider: str = "hetzner"
     name: str = "pocket-concierge"
@@ -56,15 +55,10 @@ class Settings:
     swap_gb: int = 2
 
     def validate(self) -> None:
-        if not self.ssh_public_key.startswith(("ssh-ed25519 ", "ssh-rsa ", "ecdsa-")):
-            raise ValueError("sshPublicKey sieht nicht wie ein öffentlicher SSH-Schlüssel aus")
-        if not self.ssh_allowed_cidrs:
-            raise ValueError("sshAllowedCidrs ist leer: SSH wäre von nirgends erreichbar")
-        for cidr in self.ssh_allowed_cidrs:
-            if "/" not in cidr:
-                raise ValueError(f"sshAllowedCidrs: {cidr!r} braucht eine Präfixlänge, z. B. /32")
-            if cidr in ("0.0.0.0/0", "::/0"):
-                raise ValueError("sshAllowedCidrs: SSH für das ganze Internet zu öffnen ist nicht erlaubt")
+        if not self.tailscale_auth_key.startswith("tskey-"):
+            raise ValueError("tailscaleAuthKey sieht nicht wie ein Tailscale-Auth-Key aus (tskey-…)")
+        if not ROLE_NAME.match(self.name):
+            raise ValueError(f"name: ungültiger Servername {self.name!r} (a-z, 0-9, -)")
         if "concierge" not in self.roles:
             raise ValueError("roles muss die Rolle 'concierge' enthalten")
         for role in self.roles:

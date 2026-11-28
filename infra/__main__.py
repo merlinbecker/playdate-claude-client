@@ -5,7 +5,11 @@ Standard ist ein kleiner Server bei Hetzner Cloud. Der Server wird bei
 Sitzungen, Inboxen und Anmeldungen erhalten bleiben. Spätere Änderungen
 am Host laufen über `pocket-update` auf dem Server selbst.
 
-Persönliche Werte (erlaubte IPs, Repo-URLs in Cloud-Init, Server-Adressen)
+Zugang nur über Tailscale: Der Server tritt beim ersten Start mit einem
+Auth-Key deinem Tailnet bei, SSH läuft über Tailscale SSH. Von außen ist
+kein Port für Anmeldungen offen. Notfallzugang ist die Hetzner-Konsole.
+
+Persönliche Werte (Auth-Key und Repo-URLs in Cloud-Init, Server-Adressen)
 werden als Pulumi-Secrets behandelt. So tauchen sie auch in öffentlichen
 Workflow-Logs nicht im Klartext auf.
 """
@@ -21,8 +25,7 @@ from settings import Settings, parse_role_repos, split_list
 def load_settings() -> Settings:
     cfg = pulumi.Config("pocket-concierge")
     settings = Settings(
-        ssh_public_key=cfg.require("sshPublicKey").strip(),
-        ssh_allowed_cidrs=split_list(cfg.require("sshAllowedCidrs")),
+        tailscale_auth_key=cfg.require("tailscaleAuthKey").strip(),
         repo_url=cfg.require("repoUrl"),
     )
     settings.provider = cfg.get("provider") or settings.provider
@@ -47,24 +50,19 @@ def deploy_hetzner(settings: Settings) -> dict:
 
     labels = {"app": "pocket-concierge", "instance": settings.name}
 
-    key = hcloud.SshKey(
-        f"{settings.name}-key",
-        name=f"{settings.name}-admin",
-        public_key=settings.ssh_public_key,
-        labels=labels,
-    )
-
     firewall = hcloud.Firewall(
         f"{settings.name}-fw",
         name=f"{settings.name}-fw",
         labels=labels,
         rules=[
+            # Kein SSH von außen. Tailscale braucht nur ausgehende Verbindungen;
+            # dieser UDP-Port erlaubt zusätzlich direkte statt umgeleitete Verbindungen.
             hcloud.FirewallRuleArgs(
                 direction="in",
-                protocol="tcp",
-                port="22",
-                source_ips=pulumi.Output.secret(settings.ssh_allowed_cidrs),
-                description="SSH nur von erlaubten Adressen",
+                protocol="udp",
+                port="41641",
+                source_ips=["0.0.0.0/0", "::/0"],
+                description="Tailscale (direkte Verbindungen)",
             ),
             hcloud.FirewallRuleArgs(
                 direction="in",
@@ -82,7 +80,6 @@ def deploy_hetzner(settings: Settings) -> dict:
         image=settings.image,
         location=settings.location,
         backups=settings.backups,
-        ssh_keys=[key.id],
         firewall_ids=[firewall.id.apply(int)],
         public_nets=[hcloud.ServerPublicNetArgs(ipv4_enabled=True, ipv6_enabled=True)],
         user_data=pulumi.Output.secret(cloud_init.render(settings)),
@@ -93,9 +90,9 @@ def deploy_hetzner(settings: Settings) -> dict:
     pulumi.export("provider", "hetzner")
     pulumi.export("ipv4", pulumi.Output.secret(server.ipv4_address))
     pulumi.export("ipv6", pulumi.Output.secret(server.ipv6_address))
-    pulumi.export("ssh", pulumi.Output.secret(server.ipv4_address.apply(lambda ip: f"ssh {settings.admin_user}@{ip}")))
+    pulumi.export("ssh", f"ssh {settings.admin_user}@{settings.name}  (über Tailscale)")
     pulumi.export("roles", settings.roles)
-    return {"key": key, "firewall": firewall, "server": server}
+    return {"firewall": firewall, "server": server}
 
 
 PROVIDERS = {"hetzner": deploy_hetzner}

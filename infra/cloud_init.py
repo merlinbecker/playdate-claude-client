@@ -1,7 +1,7 @@
 """Erzeugt die Cloud-Init-Konfiguration für den ersten Start des Servers.
 
 Cloud-Init legt nur das Nötigste an: Benutzer, SSH-Härtung, Konfiguration
-unter /etc/pocket-concierge und den Klon dieses Repos. Alles Weitere erledigt
+unter /etc/pocket-concierge (inkl. Tailscale-Auth-Key) und den Klon dieses Repos. Alles Weitere erledigt
 host/setup-host.sh, das sich später jederzeit erneut ausführen lässt.
 """
 
@@ -15,6 +15,7 @@ from settings import Settings
 
 ENV_PATH = "/etc/pocket-concierge/pocket-concierge.env"
 ROLE_REPOS_PATH = "/etc/pocket-concierge/role-repos"
+TAILSCALE_KEY_PATH = "/etc/pocket-concierge/tailscale-authkey"
 CHECKOUT = "/opt/pocket-concierge"
 
 
@@ -37,6 +38,7 @@ def render_env(settings: Settings) -> str:
         "POCKET_CONCIERGE_REPO_URL": settings.repo_url,
         "POCKET_CONCIERGE_REPO_REF": settings.repo_ref,
         "POCKET_CONCIERGE_SWAP_GB": str(settings.swap_gb),
+        "POCKET_CONCIERGE_HOSTNAME": settings.name,
     }
     lines = ["# Von Pulumi erzeugt. Änderungen hier überschreibt kein späteres Deployment."]
     lines += [f"{key}={shlex.quote(value)}" for key, value in values.items()]
@@ -50,6 +52,12 @@ def render_role_repos(settings: Settings) -> str:
 def render(settings: Settings) -> str:
     write_files = [
         {"path": ENV_PATH, "permissions": "0644", "owner": "root:root", "content": render_env(settings)},
+        {
+            "path": TAILSCALE_KEY_PATH,
+            "permissions": "0600",
+            "owner": "root:root",
+            "content": settings.tailscale_auth_key + "\n",
+        },
     ]
     if settings.role_repos:
         write_files.append(
@@ -69,11 +77,11 @@ def render(settings: Settings) -> str:
                 "shell": "/bin/bash",
                 "sudo": "ALL=(ALL) NOPASSWD:ALL",
                 "lock_passwd": True,
-                "ssh_authorized_keys": [settings.ssh_public_key],
             }
         ],
         "disable_root": True,
         "ssh_pwauth": False,
+        "hostname": settings.name,
         "package_update": True,
         "package_upgrade": True,
         "packages": ["git", "tmux", "inotify-tools", "curl", "jq", "unattended-upgrades"],

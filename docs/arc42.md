@@ -475,6 +475,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 17 | Persönliche Werte nur in GitHub-Secrets und -Variablen, in Pulumi als Secrets markiert | Repo und Workflow-Logs sind öffentlich |
 | 18 | Server wird nach dem Anlegen nicht neu gebaut; Updates per `pocket-update` | Anmeldungen, Sitzungen und Inboxen bleiben erhalten |
 | 19 | Web-Kartensimulator vor dem Playdate | Karten und Ablauf schneller iterieren; Server und Karten-DSL werden für den Playdate weiterverwendet |
+| 20 | Zugang nur über Tailscale, kein SSH von außen, keine SSH-Schlüssel | Keine IP-Pflege bei wechselnden Anschlüssen; Zugriff von allen eigenen Geräten; Notfall über die Hetzner-Konsole |
 
 ## 10. Qualitätsszenarien
 
@@ -501,7 +502,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 ## 12. Meilensteine
 
 1. **Bootstrap in der Cloud** ([`bootstrap.md`](bootstrap.md), [`infra/README.md`](../infra/README.md))
-   - [ ] Hetzner-Server per Pulumi über den GitHub-Workflow, nur SSH eingehend
+   - [ ] Hetzner-Server per Pulumi über den GitHub-Workflow, Zugang nur über Tailscale
    - [ ] Claude Code installiert und in jeder Rolle mit dem Abo angemeldet
    - [ ] Concierge und Rollen laufen als systemd-Dienste mit Remote Control, Watcher aktiv
    - [ ] Bedienung vom Handy inklusive Diktat; Trusted Devices an
