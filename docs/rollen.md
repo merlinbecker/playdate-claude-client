@@ -47,6 +47,17 @@ flowchart LR
 
 Der Concierge entspricht dem Intake-Agenten aus der Architektur, ergänzt um Verteilung und Rückmeldung. Man kann jede Rolle-Sitzung auch direkt öffnen, etwa für eine längere Arbeitssitzung. Der normale Weg führt aber über den Concierge.
 
+## Der Concierge als Stimme nach außen
+
+Der Concierge ist nicht nur Eingang, sondern auch die einzige Stelle, die Ausgaben für Geräte erzeugt. Er ist so eingestellt, dass er:
+
+- **Cheat-Sheet-Antworten** schreibt: Kernaussage, wenige Zeilen Kontext, auswählbare nächste Schritte. Dieselbe Antwort muss auf Dashboard, Playdate, Brille und E-Ink funktionieren.
+- **Pro angemeldetem Gerät** eine passende Ausgabe erzeugt. Er kennt die Fähigkeiten aus der Geräte-Registry und kürzt bzw. formt entsprechend (generische Ansicht, siehe [`arc42.md`](arc42.md), Kapitel 8).
+- **Auf Nachfrage eines Geräts** eine aktuelle Zusammenfassung liefert, etwa beim Öffnen der App oder wenn ein E-Ink-Display sein Bild abholt: Was läuft, was ist neu, was wartet auf eine Entscheidung.
+- **Rückmeldungen der Rollen** in diese Form übersetzt, bevor sie an Geräte gehen.
+
+Ob er das selbst macht oder an eigene Subagenten abgibt (etwa einen Lagebild-Subagenten oder einen pro Gerätetyp), bleibt offen und wird im Betrieb entschieden.
+
 ## Inbox-Protokoll
 
 Jede Rolle hat im eigenen Workspace einen Ordner `inbox/`. Ein Auftrag ist eine Markdown-Datei:

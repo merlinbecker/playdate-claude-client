@@ -497,3 +497,4 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 - Broker selbst bauen oder auf ein bestehendes MCP-Gateway aufsetzen?
 - Kann die MentraOS-Miniapp direkt mit dem Gateway sprechen, und nutzt sie besser die Transkription von MentraOS oder schickt sie Audio?
 - Welches E-Ink-Display wird die Referenz?
+- Erzeugt der Concierge Geräte-Ausgaben und Zusammenfassungen selbst oder über Subagenten (Lagebild, je Gerätetyp)?
