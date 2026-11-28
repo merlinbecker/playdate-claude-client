@@ -95,6 +95,7 @@ Fragen, bei denen Gegenwind willkommen ist:
 | [`docs/vision.md`](docs/vision.md) | Vision, Bausteine, Betriebsmodi und Quota |
 | [`docs/karten-dsl.md`](docs/karten-dsl.md) | Format der Karten für den Playdate |
 | [`docs/poc-setup.md`](docs/poc-setup.md) | POC auf dem lokalen Rechner aufsetzen |
+| [`docs/runbooks/`](docs/runbooks/einrichtung-fortsetzen.md) | Anleitungen, die der Concierge selbst ausführt |
 | [`docs/backlog/`](docs/backlog/README.md) | Beschriebene Vorhaben für die Bau-Rolle |
 | [`docs/devlog/`](docs/devlog/README.md) | Entwicklertagebuch, ein Eintrag pro Arbeitstag |
 

@@ -45,7 +45,8 @@ Die ausführliche Anleitung mit allen Secrets und Variablen steht in [`infra/REA
 3. **Server anlegen:** Workflow *Infrastruktur* mit `preview`, dann `up`. Cloud-Init installiert Claude Code, legt die Rollen an und startet die Sitzungen als systemd-Dienste.
 4. **Anmelden:** Über Tailscale per `ssh pocket@pocket-concierge` auf den Server, mit `tmux -L pocket-<rolle> attach` in jede Sitzung, dort `/login` und die Rückfrage für Remote Control bestätigen. Kein `ANTHROPIC_API_KEY` setzen, sonst wird über die API abgerechnet.
 5. **Rollen einrichten:** Die `CLAUDE.md` jeder Rolle liegt unter `~/roles/<rolle>/` und kommt aus einer Vorlage. Rollen mit eigenem Repo werden aus `POCKET_CONCIERGE_ROLE_REPOS` geklont.
-6. **Vom Handy verbinden:**
+6. **Rest dem Concierge überlassen:** Bau-Rolle, GitHub-Zugang und Gedächtnis richtet er nach [`runbooks/einrichtung-fortsetzen.md`](runbooks/einrichtung-fortsetzen.md) selbst ein; er hält nur an, wenn du etwas in GitHub tun musst.
+7. **Vom Handy verbinden:**
    - In der Claude-App die Sitzung **concierge** öffnen; im Alltag nur mit ihr sprechen.
    - Sprechen über die Diktierfunktion von Handy bzw. App.
    - Benachrichtigungen erlauben: Der Agent meldet sich, wenn eine lange Aufgabe fertig ist oder er eine Entscheidung braucht.
