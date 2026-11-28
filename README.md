@@ -67,11 +67,12 @@ Der Playdate kann nur bei geöffneter App senden und empfangen; Aufnahmen werden
 
 ## Meilensteine
 
-1. **Playdate-POC lokal:** Sprechen → Upload → Transkription → einfacher Agent → Karte.
-2. **VM und Web-Dashboard:** Azure-VM per Pulumi, Arborist läuft 24/7, Nachtwartung.
-3. **Queue, Gateway und Lagebild:** Asynchroner Eingang, generische Ansichten, nächste Schritte.
-4. **Broker:** To-dos, Kalender, Mail, GitHub – nur über den Broker.
-5. **Weitere Geräte:** E-Ink-Display, Even Realities G1.
+1. **Bootstrap in der Cloud:** Claude Code läuft dauerhaft auf einer Azure-VM und wird per Remote Control vom Handy bedient, auch per Diktat. Ab hier baut der Agent den Rest selbst mit. Anleitung: [`docs/bootstrap.md`](docs/bootstrap.md).
+2. **Playdate-POC:** Sprechen → Upload → Transkription → Agent → Karte.
+3. **Web-Dashboard:** Lagebild, Terminal, Nachtwartung.
+4. **Queue, Gateway und Lagebild:** Asynchroner Eingang, generische Ansichten, nächste Schritte.
+5. **Broker:** To-dos, Kalender, Mail, GitHub – nur über den Broker.
+6. **Weitere Geräte:** E-Ink-Display, Even Realities G1.
 
 ## Zum Diskutieren
 
@@ -87,6 +88,7 @@ Fragen, bei denen Gegenwind willkommen ist:
 
 | Datei | Inhalt |
 | --- | --- |
+| [`docs/bootstrap.md`](docs/bootstrap.md) | Meilenstein 1: Agent in der Cloud zum Laufen bringen |
 | [`docs/arc42.md`](docs/arc42.md) | Architektur nach arc42 mit C4-Diagrammen |
 | [`docs/vision.md`](docs/vision.md) | Vision, Bausteine, Betriebsmodi und Quota |
 | [`docs/karten-dsl.md`](docs/karten-dsl.md) | Format der Karten für den Playdate |

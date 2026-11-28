@@ -169,11 +169,12 @@ Regeln:
 
 ## 7. Ausbaustufen
 
-1. **POC lokal:** Playdate → Ingest → Transkription → einfacher Agent → Karten (siehe [`poc-setup.md`](poc-setup.md)).
-2. **VM-Basis:** Pulumi-Stack, Docker, Arborist läuft 24/7, Web-Terminal, Scheduler mit Nachtwartung.
-3. **Eingangs-Queue, Gateway und Lagebild:** Asynchroner Eingang mit Quittung und Batch-Abarbeitung, Registry, Push, Dashboard, Lagebild-Subagent mit Auswahl-Antworten.
-4. **Broker:** Erster Tool-Zugang (z. B. To-do-Dienst) ausschließlich über den Broker, Bestätigungen per Karte.
-5. **Projekt-Subagenten:** Parallele Projekte, Wiedervorlagen, periodische Selbststeuerung.
+1. **Bootstrap in der Cloud:** Claude Code mit Remote Control auf der Azure-VM, Bedienung vom Handy. Der Agent baut ab hier mit (siehe [`bootstrap.md`](bootstrap.md)).
+2. **Playdate-POC:** Ingest, Transkription, Karten.
+3. **Web-Dashboard:** Lagebild, Terminal, Scheduler mit Nachtwartung.
+4. **Eingangs-Queue, Gateway und Lagebild:** Asynchroner Eingang mit Quittung und Batch-Abarbeitung, Registry, Push, Lagebild-Subagent mit Auswahl-Antworten.
+5. **Broker:** Tools ausschließlich über den Broker, Bestätigungen per Ansicht.
+6. **Projekt-Subagenten und weitere Geräte:** Parallele Projekte, Wiedervorlagen, E-Ink, G1.
 
 ## 8. Offene Fragen
 

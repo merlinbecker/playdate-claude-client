@@ -1,6 +1,6 @@
 # Architektur von Arborist nach arc42
 
-> Gesamtarchitektur. Der erste Meilenstein ist der Playdate-POC (Kapitel 12). Hintergrund und Betriebsmodi: [`vision.md`](vision.md).
+> Gesamtarchitektur. Erster Meilenstein ist der Bootstrap in der Cloud ([`bootstrap.md`](bootstrap.md)), danach wird der Rest mit dem laufenden Agenten gebaut (Kapitel 12). Hintergrund und Betriebsmodi: [`vision.md`](vision.md).
 
 ## 1. Einführung und Ziele
 
@@ -332,7 +332,8 @@ sequenceDiagram
 
 | Variante | Läuft auf | Erreichbarkeit | Zweck |
 | --- | --- | --- | --- |
-| POC | Lokaler Rechner (Linux, macOS, WSL2) | LAN, HTTP mit Token | Ablauf und Latenz testen |
+| Bootstrap | Azure-VM, nur Claude Code mit Remote Control | Nur ausgehend; SSH für Admin | Agent sofort nutzbar, baut den Rest |
+| POC | Lokaler Rechner oder die VM | LAN bzw. HTTPS mit Token | Playdate-Ablauf und Latenz testen |
 | V2 | Azure-VM (z. B. B2s, 2 vCPU, 4 GB RAM), Docker, Pulumi | HTTPS über Reverse Proxy, nur Port 443 | Dauerbetrieb |
 
 ```mermaid
@@ -422,7 +423,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 2 | Chunked Upload statt Streaming | Playdate-Netz unzuverlässig, Wiederaufnahme nötig |
 | 3 | Polling für Geräte ohne Push-Kanal | Playdate und E-Ink können keinen Push; Web und Brille bekommen Push |
 | 4 | Deklarative Karten-DSL | Neue Darstellungen ohne Client-Update |
-| 5 | Erst lokaler POC, dann VM | Ablauf testen, bevor Kosten entstehen |
+| 5 | Zuerst Bootstrap in der Cloud mit Remote Control (ersetzt „erst lokaler POC“) | Der laufende Agent baut den Rest selbst; Remote Control braucht keine eingehenden Ports |
 | 6 | Downsampling in Lua im POC | Schnell umsetzbar; C nur, wenn zu langsam |
 | 7 | Transkription als austauschbarer Provider | Voxtral ist günstig und gut; lokal bleibt Standard |
 | 8 | Azure-VM mit Docker, IaC mit Pulumi | Dauerhafte Shell für Claude Code; reproduzierbar |
@@ -430,6 +431,7 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 | 10 | Eingangs-Queue vor dem Agenten, asynchrone Batches | Ablegen geht immer; Quota wird geschont |
 | 11 | Generische Ansicht plus Geräte-Adapter | Sehr unterschiedliche Geräte ohne Logik im Client |
 | 12 | Claude Code mit Abo, keine Überlauf-Abrechnung | Kosten planbar; Quota leer heißt warten bis zum Reset |
+| 13 | Remote Control bleibt als Admin-Zugang | Funktioniert unabhängig vom eigenen Gateway; Notfallzugang, wenn eigene Teile kaputt sind |
 
 ## 10. Qualitätsszenarien
 
@@ -455,16 +457,23 @@ Der System-Prompt liegt nicht im Repo, sondern in einer Datei, auf die `PDC_AGEN
 
 ## 12. Meilensteine
 
-1. **POC Playdate lokal**
+1. **Bootstrap in der Cloud** ([`bootstrap.md`](bootstrap.md))
+   - [ ] Azure-VM per Pulumi, nur SSH eingehend
+   - [ ] Claude Code installiert und mit dem Abo angemeldet
+   - [ ] Privater Workspace mit eigener `CLAUDE.md`, Repo geklont
+   - [ ] `claude remote-control` läuft dauerhaft (tmux, dann systemd)
+   - [ ] Bedienung vom Handy inklusive Diktat; Trusted Devices an
+   - [ ] Erste echte Aufgabe: Der Agent baut am eigenen Repo weiter
+2. **POC Playdate** (Server läuft schon auf der VM)
    - [ ] Server lokal: Chunk-Ingest, Whisper, Queue, Echo- und Claude-Agent
    - [ ] `tools/fake_playdate.py` für Tests ohne Hardware
    - [ ] Playdate: Aufnahme mit A, Downsampling, Outbox mit Chunks und Retry
    - [ ] Inbox-Polling und Renderer für `text`, `list`, `icon`, `bar`, `choices`
    - [ ] Messung: Zeit vom Loslassen bis zur ersten Karte
-2. **VM und Web-Dashboard:** Pulumi-Stack, Arborist 24/7, Dashboard mit Lagebild und Terminal, Nachtwartung.
-3. **Queue, Gateway und Lagebild:** Asynchroner Eingang, Registry, generische Ansicht, Lagebild-Subagent.
-4. **Broker:** To-dos, Kalender, Mail und GitHub nur über den Broker, Bestätigungen per Ansicht.
-5. **Weitere Geräte:** E-Ink-Mini-Dashboard, Even Realities G1 über MentraOS.
+3. **Web-Dashboard:** Lagebild und Terminal, Nachtwartung über den Scheduler.
+4. **Queue, Gateway und Lagebild:** Asynchroner Eingang, Registry, generische Ansicht, Lagebild-Subagent.
+5. **Broker:** To-dos, Kalender, Mail und GitHub nur über den Broker, Bestätigungen per Ansicht.
+6. **Weitere Geräte:** E-Ink-Mini-Dashboard, Even Realities G1 über MentraOS.
 
 ## 13. Offene Fragen
 
