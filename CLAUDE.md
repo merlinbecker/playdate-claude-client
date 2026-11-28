@@ -15,6 +15,9 @@ Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisc
 - Externe Tools nie direkt an den Agenten hängen, sondern über den Rechte- und Tool-Broker.
 - Generisch bleiben: Keine persönlichen Daten, Hostnamen oder Tokens ins Repo. Konfiguration über Umgebungsvariablen.
 
+## Devlog
+An jedem Arbeitstag einen Eintrag in `docs/devlog/JJJJ-MM-TT.md` anlegen oder ergänzen und in `docs/devlog/README.md` verlinken. Kurz und für interessierte Laien geschrieben: was besprochen, entschieden, gelernt wurde und was als Nächstes kommt. Regeln und Front Matter stehen in `docs/devlog/README.md`.
+
 ## Server
 - Python 3.11+, FastAPI, SQLite. Start: `uvicorn main:app` in `server/`.
 - `PDC_AGENT=echo` für Tests ohne Claude, `PDC_AGENT=claude` für den echten Agenten.
