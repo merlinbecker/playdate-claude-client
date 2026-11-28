@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Projekt
-Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Architektur: `docs/arc42.md`, Zielvision: `docs/vision.md`.
+Voice-Thin-Client für einen selbst gehosteten Claude-Code-Agenten. Playdate = dünner Client (Aufnahme, Puffer, Upload, Rendern). Alle Logik liegt auf dem Server. Teil von Arborist, einem 24/7-Assistenten auf Basis von Claude Code. Architektur des POC: `docs/arc42.md`, Vision und Scope: `docs/vision.md`.
 
 ## Sprache
 Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisch.
@@ -12,6 +12,7 @@ Doku, Kommentare und Commit-Messages auf Deutsch. Bezeichner im Code auf Englisc
 - Store-and-forward: Jede Aufnahme hat eine ID, wird in nummerierten Chunks idempotent hochgeladen und kann nach Abbruch fortgesetzt werden.
 - Asynchron: Upload, Transkription und Agent sind über eine Queue entkoppelt.
 - Agent-Ausgaben immer validieren. Kaputtes JSON wird zur Textkarte, nie zum Absturz.
+- Externe Tools nie direkt an den Agenten hängen, sondern über den Rechte- und Tool-Broker.
 - Generisch bleiben: Keine persönlichen Daten, Hostnamen oder Tokens ins Repo. Konfiguration über Umgebungsvariablen.
 
 ## Server

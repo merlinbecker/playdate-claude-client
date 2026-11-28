@@ -12,7 +12,7 @@ Playdate ──(Audio-Chunks, PUT)──▶ Server: Ingest → Transkription →
 
 ## Vision
 
-Langfristig wird daraus ein generischer Agenten-Hub: ein Claude-Code-Agent in der Cloud, der Ergebnisse an mehrere Geräte verteilt – Playdate, E-Ink-Display, Web-Ansicht – und sich mehrfach betreiben lässt, z. B. privat und für die Arbeit getrennt. Details in [`docs/vision.md`](docs/vision.md).
+Der Playdate-Client ist der erste Baustein von **Arborist**: einem persönlichen Assistenten, der als Claude Code 24/7 auf einer VM läuft. Er wird von mehreren registrierten Geräten bedient (Playdate, Web-UI mit Dashboard und Terminal, Handy), verteilt Aufgaben an Projekt-Subagenten und bekommt externe Tools nur über einen Rechte- und Tool-Broker. Ein Lagebild-Subagent liefert Cheat Sheets und vorgefertigte nächste Schritte, damit sich alles auch ohne Sprache bedienen lässt. Details in [`docs/vision.md`](docs/vision.md).
 
 ## Status
 
@@ -22,7 +22,7 @@ Proof of Concept. Ziel des POC: flüssiger Ablauf von „A drücken und sprechen
 
 | Pfad | Inhalt |
 | --- | --- |
-| `docs/vision.md` | Zielvision: Agenten-Hub mit mehreren Geräten und Instanzen |
+| `docs/vision.md` | Vision und Scope von Arborist |
 | `docs/arc42.md` | Architektur nach arc42 |
 | `docs/karten-dsl.md` | Format der Karten, die der Agent erzeugt |
 | `docs/poc-setup.md` | POC auf dem lokalen Rechner aufsetzen |

@@ -1,77 +1,143 @@
-# Vision und Konzept: Agenten-Hub
+# Vision und Scope: Arborist
 
-> Ergänzt [`arc42.md`](arc42.md). Dort steht die Architektur des Playdate-POC, hier die Zielvision darüber hinaus.
+> Ergänzt [`arc42.md`](arc42.md). arc42 beschreibt den Playdate-POC, dieses Dokument das Zielbild und den Projektumfang.
 
-## 1. Vision
+## 1. Ziel
 
-Ein **dauerhaft laufender Claude-Code-Agent in der Cloud**, der laufend mit Eingaben gefüttert wird – Sprache, Text, Ereignisse – und seine Ergebnisse an **mehrere Ausgabegeräte** verteilt. Was wohin geht, hängt davon ab, welche Geräte gerade online sind und worum es gerade geht.
+**Arborist** ist ein persönlicher Assistent, der rund um die Uhr läuft: Claude Code CLI mit einem Claude-Abo, dauerhaft auf einer Azure-VM. Er nimmt persönliche Belange entgegen – To-dos, Projekte, Notizen, Recherchen – und kümmert sich selbstständig darum, mehrere Projekte parallel am Laufen zu halten.
 
-Der Playdate ist dabei **ein Client unter mehreren**, nicht das Zentrum. Das Repo bleibt generisch, damit andere den Stack mit ihren eigenen Geräten und Agenten betreiben können.
+- **Immer da:** Der Agent läuft 24/7. Die Kommunikation darf asynchron sein.
+- **Sprache zuerst:** Sprache ist das Hauptmedium. Jede Interaktion geht aber auch ohne Sprache, über vorbereitete Antworten und Themen.
+- **Viele Geräte:** Registrierte Endgeräte greifen auf denselben Agenten zu.
+- **Kontrollierte Werkzeuge:** Der Agent bekommt externe Tools nur über einen Rechte- und Tool-Broker, nie direkt.
 
-## 2. Leitprinzipien
+## 2. Überblick
 
-- **Generisch und öffentlich:** Das Repo enthält Infrastruktur, Protokolle und Beispiel-Agenten. Persönliche Inhalte, Prompts, Hostnamen und Tokens gehören nicht hinein.
-- **Mehrere Instanzen:** Derselbe Stack lässt sich mehrfach betreiben, z. B. eine private und eine für die Arbeit. Instanzen sind vollständig getrennt: eigene Container, Secrets, Daten und Claude-Zugänge.
-- **Sprache rein, Karten raus:** Spracheingabe ja, Sprachausgabe nein. Ausgaben sind geräte-spezifische Darstellungen, auf dem Playdate z. B. Karten nach der [Karten-DSL](karten-dsl.md).
-- **Thin Clients:** Geräte puffern, laden hoch, holen ab und rendern. Logik liegt auf dem Server.
-- **Austauschbare Transkription:** Lokal mit Whisper oder über eine API wie Voxtral – pro Instanz konfigurierbar.
-- **Infrastructure as Code:** Die Cloud-Umgebung wird mit Pulumi beschrieben und ist reproduzierbar.
+```mermaid
+flowchart LR
+    subgraph Geräte
+        PD[Playdate]
+        WEB[Web-UI<br/>Terminal + Dashboard]
+        PH[Handy]
+    end
+
+    GW[Device-Gateway<br/>Ingest + Push]
+    IN[Intake-Agent<br/>Transkription + Aufbereitung]
+
+    subgraph VM[Azure-VM]
+        AR[Arborist<br/>Main-Agent, Claude Code]
+        SA[Projekt-Subagenten]
+        CS[Lagebild-Subagent<br/>Cheat Sheets + nächste Schritte]
+    end
+
+    BR[Rechte- und Tool-Broker<br/>Tokens, Policies, MCP]
+    EXT[Externe Dienste<br/>MCP-Server, APIs]
+
+    PD & WEB & PH <--> GW
+    GW --> IN --> AR
+    AR <--> SA
+    AR --> CS --> GW
+    AR -- ein lokaler MCP-Server --> BR --> EXT
+```
 
 ## 3. Bausteine
 
-| Baustein | Aufgabe |
-| --- | --- |
-| Ingest-API | Nimmt Audio, Text und Interaktionen von Geräten entgegen (chunked, idempotent, siehe arc42) |
-| Transkription | Audio → Text. Provider wählbar: `whisper` (lokal) oder `voxtral` (Mistral-API, Batch) |
-| Message-Hub | Drehscheibe zwischen Eingängen, Agenten und Geräten. Ein Kanal pro Gerät bzw. Thema |
-| Agent-Worker | Claude Code CLI mit fortgesetzter Session; verarbeitet Aufträge |
-| Verteil-Agenten | Laufen periodisch, fassen das aktuelle Thema zusammen und legen passende Ausgaben in die Gerätekanäle |
-| Geräte-Registry | Kennt die Geräte, ihren Online-Status (letzter Abruf) und ihre Fähigkeiten |
-| Ausgabe-Adapter | Übersetzen Agenten-Ergebnisse ins Format des Geräts (Karte, E-Ink-Bild, HTML) |
+### 3.1 Endgeräte
 
-## 4. Geräte
+Jedes Gerät wird registriert (Gerätetoken) und meldet seine Fähigkeiten: Eingabe (Sprache, Text, Auswahl) und Ausgabe (Karten, HTML, Terminal).
 
-| Gerät | Rolle | Eingabe | Ausgabe |
-| --- | --- | --- | --- |
-| Playdate | Interaktives Agenten-Terminal | Sprache (offline gepuffert), Auswahl per Kurbel/Tasten | Dynamische 1-Bit-Karten mit Tilesets, Animation, Antwortauswahl |
-| E-Ink-Display | Passive Anzeige | – | Status, aktuelles Thema, Zusammenfassungen |
-| Arborist-Website | Web-Ansicht | optional | Verlauf, aktuelle Themen, Agenten-Status |
-| Weitere | über Adapter | | |
-
-Neue Geräte brauchen nur einen Eintrag in der Registry und einen Ausgabe-Adapter.
-
-## 5. Datenfluss
-
-1. Ein Gerät sendet Audio oder Text an die Ingest-API.
-2. Audio wird vom konfigurierten Provider transkribiert.
-3. Der Text landet als Nachricht im Message-Hub.
-4. Der Agent-Worker verarbeitet den Auftrag und erzeugt Ergebnisse.
-5. Verteil-Agenten prüfen periodisch, welche Geräte online sind, und legen passende Ausgaben in deren Kanäle.
-6. Geräte holen ihren Kanal ab (Pull mit `since`-Cursor) und stellen die Inhalte dar.
-
-## 6. Betrieb
-
-| Variante | Plattform | Zweck |
+| Gerät | Eingabe | Ausgabe |
 | --- | --- | --- |
-| POC | Lokaler Rechner im LAN | Ablauf und Latenz testen (siehe [`poc-setup.md`](poc-setup.md)) |
-| V2 | Azure-VM (z. B. B2s: 2 vCPU, 4 GB RAM) mit Docker | Dauerbetrieb, je Instanz ein eigener Container-Satz |
-| Alternative | Raspberry Pi ab Modell 4 (64 Bit, ≥ 4 GB RAM) mit Docker | Günstiger Heimbetrieb |
+| Playdate | Sprache (offline gepuffert), Auswahl per Kurbel und Tasten | 1-Bit-Karten nach [Karten-DSL](karten-dsl.md) |
+| Web-UI | Sprache, Text, Terminal | Dashboard mit Lagebild und Projekten; Terminal (z. B. xterm.js) auf die Agent-Session |
+| Handy | Sprache, Text, Auswahl | Web-UI mobil, Benachrichtigungen |
+| Später | z. B. E-Ink-Display | passive Anzeige über Adapter |
 
-- **VM statt Container Instances:** Claude Code braucht eine dauerhafte Shell mit Dateisystem und Git-Arbeitskopien; Container Instances passen besser zu kurzlebigen Jobs.
-- **Provisionierung mit Pulumi:** VM, Netzwerk, Firewall (nur 443), Secrets, Auto-Shutdown optional.
-- **Ältere Raspberry Pis** (z. B. Pi 2, 32 Bit, 1 GB RAM) sind ungeeignet.
+### 3.2 Device-Gateway (Ingest und Push)
 
-## 7. Vorgehen
+Einziger Eingang für Geräte.
 
-1. **POC lokal:** Sprach-Upload vom Playdate, Karten zurück, einfacher Antwort-Agent.
-2. **Cloud-Basis:** Azure-VM per Pulumi, Docker, Server als Dienst, HTTPS.
-3. **Hub und Transkription:** Message-Hub, Transkriptions-Provider umschaltbar.
-4. **Weitere Geräte:** E-Ink-Display, Arborist-Website.
-5. **Multi-Instanz:** Konfiguration pro Instanz, Trennung privat/Arbeit.
+- **Ingest:** Audio (chunked, idempotent, wiederaufnehmbar), Text und Auswahl-Interaktionen.
+- **Push:** Verteilt Ausgaben an alle passenden Geräte. Geräte mit dauerhafter Verbindung (Web, Handy) bekommen sie per WebSocket bzw. Web-Push; der Playdate holt sie per Pull mit `since`-Cursor ab, weil er keinen Push-Kanal hat.
+- **Adapter:** Übersetzen ein generisches Ausgabeformat in Karte, HTML oder Text.
+- **Registry:** Geräte, Tokens, Fähigkeiten, zuletzt gesehen.
 
-## 8. Offene Fragen
+### 3.3 Intake-Agent
 
-- **Abrechnung:** Claude Code im Dauerbetrieb über Abo oder API-Key – Nutzungsbedingungen prüfen.
-- **Message-Hub:** SQLite-Queue weiterverwenden, Redis, NATS oder Azure Service Bus?
-- **Geräte-Auth:** Token pro Gerät und Instanz, Rotation.
-- **Arbeits-Instanz:** Nur mit Freigabe des Arbeitgebers betreiben; Datenschutz und Compliance klären, bevor dienstliche Daten oder Audio an externe Dienste gehen.
+Steht vor dem Arborist und macht aus Rohdaten eine saubere Anweisung.
+
+- Transkribiert Sprache über einen austauschbaren Provider: lokal (Whisper) oder Voxtral-API.
+- Bereinigt Füllwörter, erkennt Sprache, Bezug auf laufende Themen und Dringlichkeit.
+- Legt das Ergebnis als Auftrag in die Queue des Arborist.
+- Darf ein kleines, günstiges Modell nutzen. Er hat keine Tools außer der Queue.
+
+### 3.4 Arborist (Main-Agent)
+
+Claude Code CLI, dauerhaft laufend, mit fortgesetzter Session.
+
+- Nimmt Aufträge aus der Queue an und entscheidet, welches Projekt betroffen ist.
+- Delegiert an **Projekt-Subagenten**, je einer pro Projekt bzw. Bereich (z. B. To-dos, ein Code-Projekt, Recherche). Mehrere Projekte laufen parallel.
+- Hält den Überblick: offene Aufgaben, laufende Subagenten, Wiedervorlagen. Stößt periodisch selbst Arbeit an.
+- Arbeitet in sich abgeschlossen in seinem Container. Externe Dienste erreicht er nur über den Broker.
+
+### 3.5 Lagebild-Subagent
+
+Läuft immer mit und macht den Agenten auch ohne Sprache bedienbar.
+
+- Schreibt zu jeder laufenden Tätigkeit eine kurze, Cheat-Sheet-artige Zusammenfassung.
+- Bietet **mögliche nächste Schritte** als vorgefertigte Antworten an.
+- Pflegt eine Liste der **aktuellen Themen des Tages**, die man auf einem Handheld auswählen kann.
+- Gibt alles im generischen Ausgabeformat ans Gateway, das es pro Gerät rendert.
+
+### 3.6 Rechte- und Tool-Broker
+
+Der Agent bekommt **keine eigenen Tool-Anbindungen**. Alles Externe läuft über den Broker.
+
+- **Anmeldung:** Externe MCP-Server und APIs werden im Broker eingerichtet; der Nutzer meldet sich dort an. Der Broker hält alle Tokens. Der Agent sieht nie ein Token.
+- **Ein MCP-Server für den Agenten:** Der Broker stellt dem Arborist genau einen lokalen MCP-Server bereit. Darin stehen nur die Tools, die gerade erlaubt sind.
+- **Granulare Rechte:** Pro Tool (und pro Subagent bzw. Projekt) einstellbar: erlaubt, verboten oder nur nach Bestätigung. Bestätigungen laufen als Auswahl-Karte über das Gateway aufs Gerät.
+- **Protokoll:** Jeder Tool-Aufruf wird mitgeschrieben und ist im Dashboard sichtbar.
+- **Trennung:** Der Broker läuft in einem eigenen Container. Der Agent-Container enthält keine Zugangsdaten.
+
+Grenze: Die eingebauten Werkzeuge von Claude Code (Shell, Dateien) arbeiten im Agent-Container und laufen nicht über den Broker. Sie werden über die Claude-Code-Einstellungen eingeschränkt; Netzwerkzugriff aus dem Container nur zum Broker und zu Anthropic.
+
+## 4. Betrieb
+
+- **Plattform:** Azure-VM (z. B. B2s: 2 vCPU, 4 GB RAM) mit Docker; Container für Gateway, Intake, Arborist und Broker.
+- **IaC:** Pulumi provisioniert VM, Netzwerk, Firewall (nur 443), Speicher und Secrets.
+- **Zugriff:** HTTPS über Reverse Proxy; Gerätetoken pro Gerät.
+- **Mehrere Instanzen:** Der Stack ist parametrisierbar, damit sich getrennte Instanzen betreiben lassen. Eine Arbeits-Instanz nur mit Freigabe des Arbeitgebers.
+
+## 5. Scope
+
+**Drin:**
+
+- Arborist als 24/7-Main-Agent mit Projekt-Subagenten und Lagebild-Subagent
+- Intake-Agent mit Sprach-Transkription
+- Device-Gateway mit Registry, Ingest und Push
+- Clients: Playdate, Web-UI (Dashboard und Terminal), Handy (über Web-UI)
+- Rechte- und Tool-Broker mit einem MCP-Server für den Agenten
+- Betrieb auf Azure-VM, provisioniert mit Pulumi
+
+**Nicht drin (vorerst):**
+
+- Sprachausgabe
+- Mehrbenutzerbetrieb (eine Instanz gehört genau einer Person)
+- Eigene native Handy-App
+- Weitere Geräte wie E-Ink (später über Adapter)
+
+## 6. Ausbaustufen
+
+1. **POC lokal:** Playdate → Ingest → Transkription → einfacher Agent → Karten (siehe [`poc-setup.md`](poc-setup.md)).
+2. **VM-Basis:** Pulumi-Stack, Docker, Arborist läuft 24/7, Web-Terminal.
+3. **Gateway und Lagebild:** Registry, Push, Dashboard, Lagebild-Subagent mit Auswahl-Antworten.
+4. **Broker:** Erster Tool-Zugang (z. B. To-do-Dienst) ausschließlich über den Broker, Bestätigungen per Karte.
+5. **Projekt-Subagenten:** Parallele Projekte, Wiedervorlagen, periodische Selbststeuerung.
+
+## 7. Offene Fragen
+
+- **Abo im Dauerbetrieb:** Ob und wie Claude Code mit einem Abo dauerhaft und unbeaufsichtigt laufen darf, und welche Nutzungslimits gelten, in den aktuellen Bedingungen von Anthropic prüfen.
+- **Broker:** Selbst bauen oder ein bestehendes MCP-Gateway als Basis nehmen?
+- **Queue:** SQLite reicht für eine Person; später ggf. Redis oder Azure Service Bus.
+- **Intake-Modell:** Welches Modell bereitet die Anweisungen auf, und läuft es lokal oder per API?
+- **Persistenz des Agenten:** Wie übersteht der Kontext Neustarts und lange Laufzeiten (Session-Wechsel, Zusammenfassungen, Projektdateien)?

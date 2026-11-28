@@ -1,6 +1,6 @@
 # Architektur nach arc42
 
-> Die erweiterte Zielvision (mehrere Geräte, mehrere Instanzen, Betrieb auf Azure) steht in [`vision.md`](vision.md).
+> Dieses Dokument beschreibt den Playdate-POC. Vision und Gesamtscope von Arborist (Main-Agent, Subagenten, Device-Gateway, Rechte- und Tool-Broker) stehen in [`vision.md`](vision.md).
 
 ## 1. Einführung und Ziele
 
@@ -129,12 +129,13 @@ Der System-Prompt des Agenten liegt nicht im Repo, sondern in einer Datei, auf d
 | --- | --- | --- |
 | 1 | Transkription lokal mit Whisper | Datenschutz, keine Audio-Cloud |
 | 2 | Chunked Upload statt Streaming | Playdate-Netz unzuverlässig, Wiederaufnahme nötig |
-| 3 | Polling statt Push | Kein Push-Kanal auf dem Playdate; App muss ohnehin offen sein |
+| 3 | Polling statt Push (für den Playdate) | Kein Push-Kanal auf dem Playdate; App muss ohnehin offen sein. Andere Geräte bekommen Push über das Device-Gateway |
 | 4 | Deklarative Karten-DSL | Neue Darstellungen ohne Client-Update |
 | 5 | Erst lokaler POC, dann VM | Ablauf testen, bevor Kosten entstehen |
 | 6 | Downsampling in Lua im POC | Schnell umsetzbar; C nur, wenn zu langsam |
 | 7 | Transkription als austauschbarer Provider (ergänzt ADR 1) | Voxtral-API ist günstig (ca. 0,24 $/h) und gut; lokal bleibt Standard für maximalen Datenschutz |
 | 8 | V2 auf Azure-VM mit Docker, IaC mit Pulumi | Dauerhafte Shell für Claude Code; reproduzierbar; Container Instances eher für kurze Jobs |
+| 9 | Externe Tools nur über einen Rechte- und Tool-Broker | Tokens bleiben außerhalb des Agenten; granulare Rechte und Protokoll pro Tool |
 
 ## 10. Qualitätsszenarien
 
